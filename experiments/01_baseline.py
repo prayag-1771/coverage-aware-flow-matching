@@ -16,7 +16,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from xgboost import XGBClassifier
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -28,6 +27,7 @@ from src.data.nsl_kdd import (
 )
 from src.data.preprocess import Preprocessor, unseen_category_report
 from src.eval.metrics import per_class_table, summary_metrics
+from src.models.classifier import make_xgb
 
 RESULTS_DIR = Path(__file__).resolve().parents[1] / "results"
 SEED = 42
@@ -62,16 +62,7 @@ def main() -> None:
 
     print(f"\nFeature matrix: train {X_train.shape}, test {X_test.shape}")
 
-    model = XGBClassifier(
-        n_estimators=200,
-        max_depth=6,
-        learning_rate=0.3,
-        objective="multi:softprob",
-        num_class=len(CLASS_ORDER),
-        tree_method="hist",
-        random_state=SEED,
-        n_jobs=-1,
-    )
+    model = make_xgb(len(CLASS_ORDER), SEED)
     model.fit(X_train, y_train)
 
     y_pred = model.predict(X_test)

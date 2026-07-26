@@ -16,11 +16,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from xgboost import XGBClassifier
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.augment.resampling import ARMS, augment
+from src.models.classifier import make_xgb
 from src.data.nsl_kdd import (
     CATEGORICAL_COLUMNS,
     CLASS_ORDER,
@@ -60,16 +60,7 @@ def run_one(
     y_train = y_aug.map(class_to_idx).to_numpy()
     y_test = test["label"].map(class_to_idx).to_numpy()
 
-    model = XGBClassifier(
-        n_estimators=200,
-        max_depth=6,
-        learning_rate=0.3,
-        objective="multi:softprob",
-        num_class=len(CLASS_ORDER),
-        tree_method="hist",
-        random_state=seed,
-        n_jobs=-1,
-    )
+    model = make_xgb(len(CLASS_ORDER), seed)
     model.fit(X_train, y_train)
 
     y_pred = model.predict(X_test)

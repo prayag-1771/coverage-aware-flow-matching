@@ -58,28 +58,50 @@ writing the related-work section, and again before submission.
 
 ### 3.1 Base paper
 
-**Diff-IDS — Yang et al., *Computers, Materials & Continua* 82(3), 2025.**
+**Alsubaei — "Smart deep learning model for enhanced IoT intrusion detection",
+*Scientific Reports*, 2025. (Q1)**
 
-This is the paper this work improves on. It is the closest published approach: a
-generative model (diffusion) applied to NIDS class imbalance, evaluated on CICIDS2017,
-KDD99, and NSL-KDD.
+This is the paper this work builds on and improves. Its contribution is preprocessing
+and hyperparameter tuning of XGBoost and a sequential neural network, evaluated on
+NSL-KDD, UNSW-NB15, and CICIDS2017 — the same three datasets used here. It reports
+headline accuracy above 99% while a rare class still sits at F1 ≈ 0.15.
 
-**The improvement, in one sentence:** Diff-IDS uses diffusion; this work uses flow
-matching, and supplies the baseline comparisons and per-class rare-attack metrics that
-Diff-IDS omitted.
+**Why this one rather than Diff-IDS.** Alsubaei is Q1, uses our datasets, and leaves the
+rare-class problem entirely unaddressed — careful tuning does not fix it. That is the
+opening. Diff-IDS is a competing *method*, not a foundation: it must be cited and beaten,
+but nothing is built on top of it (and it has no released code).
 
-**Important practical caveat.** Diff-IDS has no public code, and its method converts
-network traffic into grayscale images for a U-Net denoiser. It is not reproducible and
-should not be reproduced. Therefore:
+**The improvement, in one sentence:** tuning cannot fix rare-class detection; generative
+augmentation can — and flow matching does it better than both the classical resamplers
+and the diffusion-based methods.
 
-- **Cite** Diff-IDS as the base paper and the motivating work
-- **Benchmark against TabDDPM** (public code, tabular-native) as the diffusion-family
-  representative
+**Narrative: reproduce → correct → improve.**
 
-Improving on a published *approach* while benchmarking against a reproducible
-implementation of that approach is standard practice and defensible under review.
+1. *Reproduce.* Re-run the baseline under published conditions. Done — see §8 Phase 0 and
+   `results/nsl_kdd_baseline_per_class.csv`. The rare-class collapse reproduces
+   (our R2L recall 0.116 vs their 0.09).
+2. *Correct.* Two defects in the published evaluation are documented in §7: the results
+   table's class labels appear rotated by one position, and the evaluation uses
+   `KDDTrain+_20Percent` rather than the official test split, which removes the
+   train/test shift and inflates accuracy to 99%. Report corrected numbers on the
+   official split.
+3. *Improve.* Add flow-matching augmentation and beat the corrected baseline, alongside
+   every classical and generative alternative.
 
-**Other key reference papers**
+Reproducing, correcting, and then improving is a stronger contribution than a plain
+improvement, and it is defensible: every correction here is evidenced by counts computed
+from the public data.
+
+### 3.2 Key competing and reference papers
+
+**Diff-IDS — Yang et al., *Computers, Materials & Continua* 82(3), 2025. (Q2/Q3)**
+The closest competing method: a diffusion model for NIDS class imbalance on CICIDS2017,
+KDD99, NSL-KDD. Reports 99.93% and never compares against SMOTE. No public code, and its
+method converts traffic to grayscale images for a U-Net — do not attempt to reproduce it.
+Cite it, and benchmark against **TabDDPM** (public code, tabular-native) as the
+reproducible diffusion-family representative.
+
+**Other reference papers**
 - Alsubaei — *Scientific Reports*, 2025. Reports NSL-KDD R2L F1 = 0.15 (on 11 test samples — see §7).
 - Feb 2026 *Scientific Reports* few-shot LSTM imbalance paper. Structural template for a Q1 imbalance paper.
 - Cantone et al. — *IEEE Access*, 2024. Cross-dataset collapse; relevant to C3.
@@ -338,9 +360,22 @@ Working consistently. Weeks, not calendar months.
 - [ ] Significance testing
 - [ ] Ablations (§6.4)
 - **GATE (end of Week 8):** Does flow matching beat SMOTE on rare-class F1?
-  - Yes → proceed as planned
-  - No → pivot framing to "when does generative augmentation help?" (honest comparative
-    study — still a paper, and arguably a more interesting one)
+  - Yes → proceed as planned.
+  - No → **pivot the method, not the paper type.** This stays a research paper with a
+    novel method; it does not become a comparative survey. In priority order:
+    1. **Per-attack-type conditional generation.** Generate `guess_passwd` and
+       `snmpguess` separately rather than one generator for all of "R2L". Phase 0 showed
+       R2L is 89% one attack type with zero test presence, so a class-level generator is
+       learning the wrong distribution by construction. This is the most promising
+       variant and may be worth trying even if the gate passes.
+    2. **Hybrid SMOTE + flow matching.** SMOTE for coverage near the decision boundary,
+       flow matching for realism. Combining a classical and a generative sampler is
+       itself untested here.
+    3. **Boundary-aware sampling.** Weight generation toward minority samples the
+       classifier gets wrong, in the spirit of ADASYN but with a learned generator.
+
+  The comparative-study framing is explicitly **rejected** as a fallback: the target is a
+  research paper with a method contribution, not a benchmark paper.
 
 ### Phase 4 — Explainability & freeze (Weeks 11–12)
 - [ ] TreeSHAP on XGBoost, global + per-rare-class attributions
