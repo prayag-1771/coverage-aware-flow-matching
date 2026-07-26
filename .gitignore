@@ -1,0 +1,22 @@
+# Datasets — never commit. See PLAN.md §4 for sources.
+# Leading slash anchors this to the repo root so it does not also match src/data/.
+/data/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# Results — generated tables/figures are reproducible from code
+results/*.csv
+results/*.png
+results/*.pdf
+!results/.gitkeep
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
