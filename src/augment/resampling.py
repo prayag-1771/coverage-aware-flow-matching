@@ -73,6 +73,8 @@ def augment(
     sampling_strategy = _target_counts(y, ratio)
 
     if arm in GENERATIVE_ARMS:
+        # generator_seed defaults to 0, so every classifier seed shares one fitted
+        # generator per class; only sampling is reseeded. See _GENERATOR_CACHE.
         return _generative(
             X, y, arm, categorical_columns, sampling_strategy, seed, types
         )
@@ -108,6 +110,18 @@ def augment(
     )
 
 
+# Fitted generators, keyed by (arm, class, seed, n_rows). Training a velocity field is
+# the expensive step; drawing from it is cheap. Across seeds the training split is
+# identical, so refitting per seed would burn hours reproducing the same model. Seed
+# stays in the key so a deliberate change of generator seed still retrains.
+_GENERATOR_CACHE: dict[tuple, object] = {}
+
+
+def clear_generator_cache() -> None:
+    """Drop cached generators. Call between datasets."""
+    _GENERATOR_CACHE.clear()
+
+
 def _generative(
     X: pd.DataFrame,
     y: pd.Series,
@@ -116,6 +130,7 @@ def _generative(
     sampling_strategy: dict,
     seed: int,
     types: pd.Series | None,
+    generator_seed: int = 0,
 ) -> tuple[pd.DataFrame, pd.Series]:
     """Fit a flow-matching generator per minority class and top it up to target.
 
@@ -135,27 +150,35 @@ def _generative(
             continue
 
         subset = X.loc[y == cls].reset_index(drop=True)
+        key = (arm, cls, generator_seed, len(subset))
 
-        if arm == "flowmatch_pertype":
-            if types is None:
-                raise ValueError("flowmatch_pertype requires `types`.")
-            subset_types = types.loc[y == cls].reset_index(drop=True)
-            try:
-                gen = PerTypeFlowMatcher(
-                    categorical_columns, numeric_columns, seed=seed
-                ).fit(subset, subset_types)
-            except ValueError:
-                # No attack type in this class cleared the minimum sample count.
-                # Fall back to a single class-level generator rather than skipping the
-                # class, so every arm still rebalances to the same target.
-                gen = TabularFlowMatcher(
-                    categorical_columns, numeric_columns, seed=seed
-                ).fit(subset)
+        if key in _GENERATOR_CACHE:
+            gen = _GENERATOR_CACHE[key]
         else:
-            gen = TabularFlowMatcher(
-                categorical_columns, numeric_columns, seed=seed
-            ).fit(subset)
+            if arm == "flowmatch_pertype":
+                if types is None:
+                    raise ValueError("flowmatch_pertype requires `types`.")
+                subset_types = types.loc[y == cls].reset_index(drop=True)
+                try:
+                    gen = PerTypeFlowMatcher(
+                        categorical_columns, numeric_columns, seed=generator_seed
+                    ).fit(subset, subset_types)
+                except ValueError:
+                    # No attack type in this class cleared the minimum sample count.
+                    # Fall back to a class-level generator rather than skipping the
+                    # class, so every arm still rebalances to the same target.
+                    gen = TabularFlowMatcher(
+                        categorical_columns, numeric_columns, seed=generator_seed
+                    ).fit(subset)
+            else:
+                gen = TabularFlowMatcher(
+                    categorical_columns, numeric_columns, seed=generator_seed
+                ).fit(subset)
+            _GENERATOR_CACHE[key] = gen
 
+        # Sampling is reseeded per classifier seed, so arms still differ across runs
+        # even though the underlying generator is shared.
+        gen.seed = seed
         synth = gen.sample(shortfall)
         frames.append(synth[X.columns])
         labels.append(pd.Series([cls] * len(synth), name=y.name))
