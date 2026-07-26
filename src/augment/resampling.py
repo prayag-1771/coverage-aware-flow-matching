@@ -18,7 +18,11 @@ import numpy as np
 import pandas as pd
 from imblearn.over_sampling import ADASYN, SMOTENC, RandomOverSampler
 
-ARMS = ["none", "random_oversample", "smote", "adasyn"]
+ARMS = ["none", "random_oversample", "smote", "adasyn", "flowmatch", "flowmatch_pertype"]
+
+# Generative arms need the fine-grained attack type, not just the coarse class, so
+# `augment` takes an optional `types` argument. The classical samplers ignore it.
+GENERATIVE_ARMS = {"flowmatch", "flowmatch_pertype"}
 
 
 def _target_counts(y: pd.Series, ratio: float) -> dict:
@@ -43,6 +47,7 @@ def augment(
     categorical_columns: list[str],
     seed: int = 42,
     ratio: float = 1.0,
+    types: pd.Series | None = None,
 ) -> tuple[pd.DataFrame, pd.Series]:
     """Apply one augmentation arm to a *training* split.
 
@@ -66,6 +71,11 @@ def augment(
         return X.reset_index(drop=True), y.reset_index(drop=True)
 
     sampling_strategy = _target_counts(y, ratio)
+
+    if arm in GENERATIVE_ARMS:
+        return _generative(
+            X, y, arm, categorical_columns, sampling_strategy, seed, types
+        )
 
     if arm == "random_oversample":
         sampler = RandomOverSampler(
@@ -95,6 +105,64 @@ def augment(
     return (
         pd.DataFrame(X_res, columns=X.columns).reset_index(drop=True),
         pd.Series(y_res, name=y.name).reset_index(drop=True),
+    )
+
+
+def _generative(
+    X: pd.DataFrame,
+    y: pd.Series,
+    arm: str,
+    categorical_columns: list[str],
+    sampling_strategy: dict,
+    seed: int,
+    types: pd.Series | None,
+) -> tuple[pd.DataFrame, pd.Series]:
+    """Fit a flow-matching generator per minority class and top it up to target.
+
+    Unlike the classical samplers, real rows are always retained in full and only the
+    shortfall is synthesised, so no real training data is displaced by generated data.
+    """
+    from src.augment.flow_matching import TabularFlowMatcher
+    from src.augment.per_type import PerTypeFlowMatcher
+
+    numeric_columns = [c for c in X.columns if c not in categorical_columns]
+    counts = y.value_counts()
+    frames, labels = [X], [y]
+
+    for cls, target in sampling_strategy.items():
+        shortfall = int(target) - int(counts.get(cls, 0))
+        if shortfall <= 0:
+            continue
+
+        subset = X.loc[y == cls].reset_index(drop=True)
+
+        if arm == "flowmatch_pertype":
+            if types is None:
+                raise ValueError("flowmatch_pertype requires `types`.")
+            subset_types = types.loc[y == cls].reset_index(drop=True)
+            try:
+                gen = PerTypeFlowMatcher(
+                    categorical_columns, numeric_columns, seed=seed
+                ).fit(subset, subset_types)
+            except ValueError:
+                # No attack type in this class cleared the minimum sample count.
+                # Fall back to a single class-level generator rather than skipping the
+                # class, so every arm still rebalances to the same target.
+                gen = TabularFlowMatcher(
+                    categorical_columns, numeric_columns, seed=seed
+                ).fit(subset)
+        else:
+            gen = TabularFlowMatcher(
+                categorical_columns, numeric_columns, seed=seed
+            ).fit(subset)
+
+        synth = gen.sample(shortfall)
+        frames.append(synth[X.columns])
+        labels.append(pd.Series([cls] * len(synth), name=y.name))
+
+    return (
+        pd.concat(frames, ignore_index=True),
+        pd.concat(labels, ignore_index=True),
     )
 
 

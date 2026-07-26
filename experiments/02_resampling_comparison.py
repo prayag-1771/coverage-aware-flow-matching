@@ -48,7 +48,12 @@ def run_one(
 
     # Augment BEFORE encoding, and on the training split only.
     X_aug, y_aug = augment(
-        X_train_raw, y_train_raw, arm, CATEGORICAL_COLUMNS, seed=seed
+        X_train_raw,
+        y_train_raw,
+        arm,
+        CATEGORICAL_COLUMNS,
+        seed=seed,
+        types=train["attack_type"],
     )
 
     # Preprocessing is fitted on the augmented training data and applied to test.
