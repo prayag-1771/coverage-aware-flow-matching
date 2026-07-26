@@ -9,10 +9,9 @@ __pycache__/
 *.egg-info/
 .ipynb_checkpoints/
 
-# Results — generated tables/figures are reproducible from code
-results/*.csv
-results/*.png
-results/*.pdf
+# Results — every artifact here is regenerable by re-running experiments/,
+# so nothing in this directory is tracked except the placeholder.
+results/*
 !results/.gitkeep
 
 # Editor / OS
