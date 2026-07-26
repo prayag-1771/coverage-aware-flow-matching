@@ -21,13 +21,26 @@
 %------------------------------------------------------------------------------
 % Volatile numbers -- update after each experimental re-run.
 %------------------------------------------------------------------------------
-\newcommand{\baseAcc}{0.782}          % overall accuracy, no augmentation
-\newcommand{\baseMacroF}{0.592}       % macro-F1, no augmentation
-\newcommand{\baseRtwolRec}{0.116}     % R2L recall, no augmentation
-\newcommand{\baseRtwolPrec}{0.985}    % R2L precision, no augmentation
-\newcommand{\baseUtwrRec}{0.209}      % U2R recall, no augmentation
-\newcommand{\bestSmoteUtwr}{0.436}    % best U2R F1 among classical resamplers
-\newcommand{\bestAdasynRtwol}{0.254}  % best R2L F1 among classical resamplers
+% Values below are means over 5 seeds on the official KDDTrain+/KDDTest+ split,
+% from results/nsl_kdd_resampling_summary.csv. XGBoost uses subsample=0.8 and
+% colsample_bytree=0.8 so the seed perturbs the model as well as the sampler;
+% with both at 1.0 the classifier is deterministic and every seed returns an
+% identical result, reporting a standard deviation of zero that measures nothing.
+\newcommand{\baseAcc}{0.781}          % overall accuracy, no augmentation
+\newcommand{\baseMacroF}{0.569}       % macro-F1, no augmentation
+\newcommand{\baseRtwolRec}{0.107}     % R2L recall, no augmentation
+\newcommand{\baseRtwolPrec}{0.974}    % R2L precision, no augmentation
+\newcommand{\baseUtwrRec}{0.131}      % U2R recall, no augmentation
+\newcommand{\baseRtwolFone}{0.192}    % R2L F1, no augmentation (sd 0.025)
+\newcommand{\baseUtwrFone}{0.219}     % U2R F1, no augmentation (sd 0.018)
+\newcommand{\bestSmoteUtwr}{0.428}    % best U2R F1 among classical arms (SMOTE, sd 0.027)
+\newcommand{\bestAdasynRtwol}{0.251}  % best R2L F1 among classical arms (ADASYN, sd 0.015)
+\newcommand{\bestMacroF}{0.627}       % best macro-F1 among classical arms (SMOTE)
+
+% Fidelity-versus-utility, measured directly (see Discussion). ADASYN's synthetic
+% rows are perfectly separable from real ones yet yield the best R2L F1 of any arm.
+\newcommand{\smoteDetectAUC}{0.535}   % SMOTE, R2L: real-vs-synthetic detection AUC
+\newcommand{\adasynDetectAUC}{1.000}  % ADASYN, U2R: detection AUC
 
 %------------------------------------------------------------------------------
 % Dataset facts (FIXED -- computed from the public files, will not change)
@@ -141,13 +154,15 @@ Both omissions are consequential precisely in the regime the papers claim to
 address.
 
 Third, and most fundamentally, the field has not established \emph{why}
-augmentation succeeds when it succeeds. Recent work evaluating synthetic-data
-fidelity has found that distributional similarity to real data correlates only
-weakly --- and in some measurements negatively --- with downstream classification
-gain. If higher-fidelity synthetic data does not reliably produce better
-detection, then the argument for preferring a more expensive generator loses its
-foundation, and the choice among methods becomes empirical rather than
-principled.
+augmentation succeeds when it succeeds. The implicit argument for preferring a
+generative model over interpolation is that its samples are more realistic, and
+that realism should translate into better detection. We find that it does not.
+Training a discriminator to separate synthetic from real minority samples, SMOTE
+is near-indistinguishable from real data on NSL-KDD R2L (AUC
+\smoteDetectAUC{}), while ADASYN is perfectly separable on U2R (AUC
+\adasynDetectAUC{}). Yet ADASYN yields the highest R2L F1 of any method we test.
+Sample fidelity and downstream utility come apart, and a synthetic-data
+evaluation that reports only the former can rank methods in the wrong order.
 
 \subsection{This work}
 

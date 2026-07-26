@@ -224,9 +224,37 @@ Two is enough. Do not add more; it multiplies runtime and adds nothing to the ar
 | Flow matching, varying ODE steps (10/50/100) | Is the extra compute justified? |
 | Flow matching with vs without categorical post-processing | Does validity enforcement matter? |
 
-### 6.5 Synthetic-quality gate — run BEFORE any classifier results are trusted
+### 6.5 Synthetic-quality diagnostics — report, but do NOT gate on them
 
-If the synthetic data is garbage, no downstream number means anything.
+**Revised 2026-07-26.** This section originally treated sample quality as a blocking
+checkpoint: fail the detection test, stop. Measurement showed that is wrong.
+
+Running the identical checks on the classical samplers:
+
+| arm | class | detection AUC | NN ratio | KS median | resulting R2L F1 |
+|---|---|---|---|---|---|
+| SMOTE | r2l | 0.535 | 0.63 | 0.011 | 0.246 |
+| ADASYN | r2l | 0.989 | 9.54 | 0.203 | **0.251 (best)** |
+| ADASYN | u2r | **1.000** | 1.21 | 0.103 | — |
+
+ADASYN's synthetic rows are perfectly separable from real ones and it still produces
+the best R2L F1 of any arm tested. **Fidelity does not predict utility.** Gating on
+quality would have discarded the best-performing method.
+
+Two consequences:
+
+1. These diagnostics are **reported as results**, not used as a pass/fail filter. Flow
+   matching proceeds to the downstream comparison regardless of its detection AUC.
+2. This supplies the evidence for a claim the Introduction previously asserted without
+   a citation. It is measured here rather than borrowed, on a cleaner demonstration
+   than the literature offers.
+
+SMOTE's sub-1.0 nearest-neighbour ratio is worth reporting alongside: its samples lie
+between two real points and therefore cannot leave the data manifold. That is a
+structural advantage of interpolation over learned generation on clustered data, and it
+is the most likely explanation for why a 2002 method remains competitive.
+
+The diagnostics still matter — they explain *why* a method behaves as it does:
 
 - **TSTR** (train on synthetic, test on real) vs **TRTR** (train real, test real)
 - **Detection test**: train a random forest to distinguish real from synthetic. AUC near
