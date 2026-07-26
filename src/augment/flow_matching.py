@@ -35,6 +35,44 @@ def _device() -> torch.device:
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+# Columns with at most this many distinct values are transported as categorical
+# rather than continuous. On NSL-KDD this captures binary flags (land, root_shell,
+# logged_in) and small counts (num_shells, su_attempted).
+DISCRETE_MAX_CARDINALITY = 10
+
+
+def infer_column_types(
+    df: pd.DataFrame, declared_categorical: list[str]
+) -> dict[str, list[str]]:
+    """Split columns into transport strategies.
+
+    Treating every non-declared column as continuous is the default in this literature
+    and it is wrong here: 60% of NSL-KDD's "numeric" columns are binary flags or small
+    integer counts. A continuous generator emits ``land = 0.37``, which corresponds to no
+    real connection and makes synthetic rows trivially separable from real ones.
+
+    Returns a dict with keys ``categorical`` (one-hot transported), ``integer``
+    (continuous transport, rounded at generation), and ``continuous``.
+    """
+    categorical = list(declared_categorical)
+    integer: list[str] = []
+    continuous: list[str] = []
+
+    for col in df.columns:
+        if col in declared_categorical:
+            continue
+        series = df[col]
+        n_unique = series.nunique()
+        if n_unique <= DISCRETE_MAX_CARDINALITY:
+            categorical.append(col)
+        elif series.dropna().mod(1).eq(0).all():
+            integer.append(col)
+        else:
+            continuous.append(col)
+
+    return {"categorical": categorical, "integer": integer, "continuous": continuous}
+
+
 class VelocityNet(nn.Module):
     """MLP predicting the velocity field v(x, t).
 
@@ -95,6 +133,11 @@ class TabularFlowMatcher:
 
     _categories: dict[str, pd.Index] = field(default_factory=dict, init=False)
     _blocks: list[tuple[str, int, int]] = field(default_factory=list, init=False)
+    _cat_cols: list[str] = field(default_factory=list, init=False)
+    _int_cols: list[str] = field(default_factory=list, init=False)
+    _con_cols: list[str] = field(default_factory=list, init=False)
+    _cont_cols_order: list[str] = field(default_factory=list, init=False)
+    _log_mask: np.ndarray | None = field(default=None, init=False)
     _num_min: np.ndarray | None = field(default=None, init=False)
     _num_max: np.ndarray | None = field(default=None, init=False)
     _model: VelocityNet | None = field(default=None, init=False)
@@ -103,50 +146,86 @@ class TabularFlowMatcher:
     # ---- encoding -----------------------------------------------------------
 
     def _encode(self, df: pd.DataFrame, fit: bool) -> np.ndarray:
-        parts: list[np.ndarray] = []
         if fit:
+            types = infer_column_types(
+                df[self.categorical_columns + self.numeric_columns],
+                self.categorical_columns,
+            )
+            self._cat_cols = types["categorical"]
+            self._int_cols = types["integer"]
+            self._con_cols = types["continuous"]
             self._blocks = []
             self._categories = {}
 
+        parts: list[np.ndarray] = []
         cursor = 0
-        for col in self.categorical_columns:
+        for col in self._cat_cols:
             if fit:
-                cats = pd.Index(sorted(df[col].astype(str).unique()))
-                self._categories[col] = cats
+                self._categories[col] = pd.Index(sorted(df[col].astype(str).unique()))
+                self._blocks.append(
+                    (col, cursor, cursor + len(self._categories[col]))
+                )
             cats = self._categories[col]
             codes = pd.Categorical(df[col].astype(str), categories=cats).codes
             onehot = np.zeros((len(df), len(cats)), dtype=np.float32)
             valid = codes >= 0
             onehot[np.arange(len(df))[valid], codes[valid]] = 1.0
             parts.append(onehot)
-            if fit:
-                self._blocks.append((col, cursor, cursor + len(cats)))
             cursor += len(cats)
 
-        num = df[self.numeric_columns].to_numpy(dtype=np.float32)
+        cont_all = self._int_cols + self._con_cols
+        num = df[cont_all].to_numpy(dtype=np.float64)
+
+        # Integer counts here are heavy-tailed: src_bytes spans zero to ~1e9, so plain
+        # min-max scaling crushes 99.9% of the mass against -1 and the model can learn
+        # nothing about the bulk of the distribution. log1p first.
+        self._log_mask = np.array(
+            [c in self._int_cols for c in cont_all], dtype=bool
+        )
+        num[:, self._log_mask] = np.log1p(np.clip(num[:, self._log_mask], 0, None))
+
         if fit:
             self._num_min = num.min(axis=0)
             self._num_max = num.max(axis=0)
+            self._cont_cols_order = cont_all
         span = np.where(self._num_max > self._num_min, self._num_max - self._num_min, 1.0)
-        # Scale to [-1, 1] so numeric and one-hot dimensions live on comparable scales;
-        # an unscaled feature like src_bytes would otherwise dominate the MSE objective.
-        num_scaled = 2.0 * (num - self._num_min) / span - 1.0
-        parts.append(num_scaled.astype(np.float32))
+        parts.append((2.0 * (num - self._num_min) / span - 1.0).astype(np.float32))
 
         return np.hstack(parts)
 
-    def _decode(self, x: np.ndarray) -> pd.DataFrame:
+    def _decode(self, x: np.ndarray, rng: np.random.Generator | None = None) -> pd.DataFrame:
+        # Categorical blocks are sampled, not argmaxed. Argmax is deterministic given
+        # the block, so wherever the learned field produces a smoothed rather than
+        # sharply peaked one-hot, every sample collapses onto the same dominant
+        # category -- on NSL-KDD R2L that yielded 2 of 7 `flag` values. Treating the
+        # block as an unnormalised distribution preserves whatever diversity the model
+        # actually learned: near-one-hot output stays near-deterministic, smoothed
+        # output produces proportional variety.
+        rng = rng or np.random.default_rng(self.seed)
         out: dict[str, np.ndarray] = {}
         for col, lo, hi in self._blocks:
             cats = self._categories[col]
-            out[col] = cats[np.argmax(x[:, lo:hi], axis=1)].to_numpy()
+            block = np.clip(x[:, lo:hi], 0.0, None) + 1e-8
+            probs = block / block.sum(axis=1, keepdims=True)
+            picks = (probs.cumsum(axis=1) > rng.random((len(probs), 1))).argmax(axis=1)
+            values = cats[picks].to_numpy()
+            # Low-cardinality numerics were stringified for one-hot transport; restore
+            # their original dtype so downstream code sees numbers, not strings.
+            if col not in self.categorical_columns:
+                values = pd.to_numeric(values)
+            out[col] = values
 
         n_cat = self._blocks[-1][2] if self._blocks else 0
-        num = x[:, n_cat:]
+        num = x[:, n_cat:].astype(np.float64)
         span = np.where(self._num_max > self._num_min, self._num_max - self._num_min, 1.0)
         num = (np.clip(num, -1.0, 1.0) + 1.0) / 2.0 * span + self._num_min
-        for i, col in enumerate(self.numeric_columns):
-            out[col] = num[:, i]
+        num[:, self._log_mask] = np.expm1(num[:, self._log_mask])
+
+        for i, col in enumerate(self._cont_cols_order):
+            values = num[:, i]
+            if col in self._int_cols:
+                values = np.rint(np.clip(values, 0, None))
+            out[col] = values
 
         return pd.DataFrame(out)[self.categorical_columns + self.numeric_columns]
 
@@ -216,15 +295,23 @@ def nearest_neighbour_distance(
     against the real-to-real nearest-neighbour distance -- if synthetic distances are
     much smaller, the generator has memorised.
     """
+    # A pairwise broadcast here allocates n_synth * n_real * n_features floats, which
+    # for a class of ~12k rows is tens of gigabytes. Use an index instead, and cap both
+    # sides -- the statistic is a mean, so a sample of a few thousand is ample.
+    from sklearn.neighbors import NearestNeighbors
+
     rng = np.random.default_rng(0)
     if len(synthetic) > sample_cap:
         synthetic = synthetic[rng.choice(len(synthetic), sample_cap, replace=False)]
+    if len(real) > sample_cap:
+        real = real[rng.choice(len(real), sample_cap, replace=False)]
 
-    d_syn = np.sqrt(((synthetic[:, None, :] - real[None, :, :]) ** 2).sum(-1)).min(1)
+    index = NearestNeighbors(n_neighbors=1).fit(real)
+    d_syn = index.kneighbors(synthetic, return_distance=True)[0][:, 0]
 
-    d_real = np.sqrt(((real[:, None, :] - real[None, :, :]) ** 2).sum(-1))
-    np.fill_diagonal(d_real, np.inf)
-    d_real = d_real.min(1)
+    # k=2 because a real point's own nearest neighbour is itself at distance zero.
+    self_index = NearestNeighbors(n_neighbors=2).fit(real)
+    d_real = self_index.kneighbors(real, return_distance=True)[0][:, 1]
 
     return {
         "synthetic_to_real_mean": float(d_syn.mean()),
