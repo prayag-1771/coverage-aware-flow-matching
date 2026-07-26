@@ -1,0 +1,243 @@
+%==============================================================================
+% Flow-Matching Augmentation for Rare Attack Detection in NIDS
+% Introduction section draft.
+%
+% Compile:  pdflatex main && bibtex main && pdflatex main && pdflatex main
+%
+% Numbers that depend on model runs are defined as macros in the block below.
+% They will change when experiments are re-run; edit them in one place rather
+% than hunting through the prose. Values marked FIXED are properties of the
+% datasets and will not change.
+%==============================================================================
+
+\documentclass[journal]{IEEEtran}
+
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+
+%------------------------------------------------------------------------------
+% Volatile numbers -- update after each experimental re-run.
+%------------------------------------------------------------------------------
+\newcommand{\baseAcc}{0.782}          % overall accuracy, no augmentation
+\newcommand{\baseMacroF}{0.592}       % macro-F1, no augmentation
+\newcommand{\baseRtwolRec}{0.116}     % R2L recall, no augmentation
+\newcommand{\baseRtwolPrec}{0.985}    % R2L precision, no augmentation
+\newcommand{\baseUtwrRec}{0.209}      % U2R recall, no augmentation
+\newcommand{\bestSmoteUtwr}{0.436}    % best U2R F1 among classical resamplers
+\newcommand{\bestAdasynRtwol}{0.254}  % best R2L F1 among classical resamplers
+
+%------------------------------------------------------------------------------
+% Dataset facts (FIXED -- computed from the public files, will not change)
+%------------------------------------------------------------------------------
+\newcommand{\trainRows}{125{,}973}
+\newcommand{\utwrTrain}{52}
+\newcommand{\utwrRatio}{1{:}1{,}295}
+\newcommand{\rtwolTrain}{995}
+\newcommand{\warezTrain}{890}
+\newcommand{\rtwolEffective}{105}
+\newcommand{\rtwolEffectiveRatio}{1{:}641}
+
+\begin{document}
+
+\title{Flow-Matching Augmentation for Rare Attack Detection\\
+in Network Intrusion Detection Systems}
+
+\author{Prayag Sharma% <-- confirm preferred form of name and affiliation
+\thanks{Manuscript draft.}}
+
+\maketitle
+
+\begin{abstract}
+% TODO: written last, once results are frozen. Roughly 150--200 words:
+% problem, method, datasets, headline result, availability of code.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Intrusion detection, class imbalance, generative models, flow matching,
+synthetic data, rare attack detection.
+\end{IEEEkeywords}
+
+%==============================================================================
+\section{Introduction}
+%==============================================================================
+
+\IEEEPARstart{N}{etwork} intrusion detection systems (NIDS) built on supervised
+machine learning are now standard components of enterprise security monitoring,
+and the published accuracy figures attached to them are remarkable. Models
+evaluated on the common benchmarks routinely report overall accuracy above
+99\,\% \cite{alsubaei2025smart, yang2025diffids}. Read alongside the operational
+reality that intrusions continue to succeed, those figures invite a question
+that the aggregate metric cannot answer: accuracy on \emph{what}?
+
+The answer is uncomfortable. Network traffic is dominated by benign flows, and
+attack traffic is dominated by a small number of high-volume attack families.
+In the NSL-KDD benchmark \cite{tavallaee2009detailed}, the user-to-root (U2R)
+category is represented by \utwrTrain{} of \trainRows{} training records, a ratio
+of roughly \utwrRatio{}. A classifier that never predicts U2R at all still scores
+above 99.9\,\% on that class by the accuracy metric. The incentive structure of
+the loss function makes this outcome not merely possible but expected, and the
+headline number conceals it completely.
+
+This matters because rarity and severity are correlated in the wrong direction.
+U2R attacks describe privilege escalation, in which an adversary already holding
+a normal user account acquires administrative control. Remote-to-local (R2L)
+attacks describe unauthorised access obtained from outside the network. Both
+categories sit at the point where an intrusion becomes materially damaging, and
+both are precisely the categories that vanish into the rounding error of an
+aggregate score. Denial-of-service traffic, by contrast, is abundant, easily
+learned, and comparatively survivable.
+
+The problem is documented but under-diagnosed. Alsubaei \cite{alsubaei2025smart}
+reports above 99\,\% overall accuracy on NSL-KDD, UNSW-NB15
+\cite{moustafa2015unsw}, and CICIDS2017 \cite{sharafaldin2018toward} after
+systematic hyperparameter optimisation, while a rare class in the same
+evaluation remains at an F1-score near 0.15. Careful tuning of a strong model,
+in other words, does not touch the failure. Our own unaugmented baseline
+reproduces the pattern: on the official NSL-KDD split we obtain overall accuracy
+of \baseAcc{} against a macro-averaged F1 of \baseMacroF{}, with R2L recall of
+\baseRtwolRec{} and U2R recall of \baseUtwrRec{}. The R2L precision of
+\baseRtwolPrec{} is instructive. The classifier is almost never wrong when it
+does flag an R2L attack; it simply declines to flag them.
+
+\subsection{Existing responses and their limits}
+
+Two families of remedy dominate the literature. The first resamples the training
+distribution. SMOTE \cite{chawla2002smote} synthesises minority examples by
+interpolating between a sample and its nearest same-class neighbours, and ADASYN
+\cite{he2008adasyn} biases that interpolation toward regions where minority
+samples are locally outnumbered. Both are inexpensive, both are two decades old,
+and both remain the practical default. Their constraint is structural: an
+interpolation of existing points cannot introduce information absent from those
+points, and on data whose class boundaries are non-convex the midpoint of two
+minority samples may fall inside a majority region, injecting mislabelled
+training data.
+
+The second family learns a generative model of the minority distribution and
+samples from it. Conditional tabular GANs \cite{xu2019modeling} were an early
+instantiation; denoising diffusion probabilistic models \cite{ho2020denoising},
+adapted to tabular data by TabDDPM \cite{kotelnikov2023tabddpm}, are the current
+preference. Applications to intrusion detection have followed quickly, with
+diffusion-based augmentation reported across the standard benchmarks
+\cite{yang2025diffids}. The reported gains are large.
+
+They are also difficult to interpret, for three reasons.
+
+First, the comparisons are incomplete. Diff-IDS \cite{yang2025diffids} evaluates
+against deep architectures --- DNN, CNN, RNN, LSTM --- and reports 99.93\,\%
+accuracy, but does not compare against SMOTE. A generative model that
+outperforms an unaugmented classifier has demonstrated that augmentation helps;
+it has not demonstrated that \emph{generative} augmentation helps, which is the
+claim being made. Establishing the latter requires the classical resampler as a
+control, and that control is frequently absent.
+
+Second, the evaluation frequently omits the information needed to assess a
+rare-class claim. Per-class support is often unreported, so a reader cannot
+distinguish a stable estimate from one computed over a handful of test samples.
+Single-run results are common, which conflates method effect with seed variance.
+Both omissions are consequential precisely in the regime the papers claim to
+address.
+
+Third, and most fundamentally, the field has not established \emph{why}
+augmentation succeeds when it succeeds. Recent work evaluating synthetic-data
+fidelity has found that distributional similarity to real data correlates only
+weakly --- and in some measurements negatively --- with downstream classification
+gain. If higher-fidelity synthetic data does not reliably produce better
+detection, then the argument for preferring a more expensive generator loses its
+foundation, and the choice among methods becomes empirical rather than
+principled.
+
+\subsection{This work}
+
+We address the rare-attack problem with flow matching
+\cite{lipman2023flow}, a continuous-time generative framework that learns a
+velocity field transporting a simple prior to the data distribution. Flow
+matching belongs to the same family as diffusion but differs in mechanism: where
+diffusion learns to invert a stochastic corruption process over many discrete
+steps, flow matching regresses a deterministic velocity along a prescribed
+probability path. The practical consequences are fewer integration steps at
+sampling time, a simpler training objective, and no noise schedule to tune. To
+our knowledge, flow matching has not previously been applied to class imbalance
+in network intrusion detection.
+
+We pair the method with an evaluation protocol designed to answer the questions
+the existing comparisons leave open. Every augmentation arm --- no augmentation,
+random oversampling, SMOTE, ADASYN, CTGAN, TabDDPM, and flow matching --- passes
+through an identical pipeline, over multiple seeds, with per-class precision,
+recall, F1, and test support reported throughout. Synthetic data is generated
+from the training split alone and added to the training split alone; the test
+split is transformed using statistics fitted on training data and is evaluated
+once.
+
+We also report a structural property of NSL-KDD that constrains what
+augmentation can achieve on that benchmark and, we argue, has been widely
+misread. Of the \rtwolTrain{} R2L records in the training split, \warezTrain{}
+belong to a single attack type, \texttt{warezclient}, which does not appear in
+the test split at all. Conversely, the largest R2L attack types in the test
+split include several with no training representation whatsoever. The usable R2L
+training signal is therefore closer to \rtwolEffective{} records than to
+\rtwolTrain{}, an effective imbalance of approximately
+\rtwolEffectiveRatio{} rather than the \(1{:}68\) implied by the class counts. A
+generator fitted to the R2L class as a whole learns predominantly to reproduce
+\texttt{warezclient}. This reframes the widely cited R2L failure on this
+benchmark as substantially a problem of distribution shift rather than of class
+balance, and it motivates generating at the level of individual attack types
+rather than coarse categories.
+
+\subsection{Contributions}
+
+\begin{enumerate}
+\item We introduce flow matching as a minority-class augmenter for network
+intrusion detection, and describe a tabular formulation that handles mixed
+categorical and continuous features.
+
+\item We provide the controlled comparison the recent generative-augmentation
+literature omits, evaluating flow matching against classical resamplers and
+against GAN- and diffusion-based generators under an identical pipeline, with
+per-class metrics, reported support, multiple seeds, and significance testing.
+
+\item We assess synthetic-sample quality directly rather than inferring it from
+downstream accuracy, using train-on-synthetic/test-on-real transfer, a
+real-versus-synthetic discriminability test, and nearest-neighbour distance to
+detect memorisation.
+
+\item We show that the rare-class failure on NSL-KDD is driven substantially by
+train/test attack-type disjointness rather than by class imbalance, quantify the
+resulting gap between nominal and effective minority sample counts, and identify
+the conditions under which augmentation can and cannot help.
+
+\item We release the full pipeline, including multi-class preprocessing and
+label mappings, with instructions sufficient to reproduce every reported table.
+\end{enumerate}
+
+\subsection{Organisation}
+
+Section~\ref{sec:related} reviews imbalance handling in intrusion detection and
+generative modelling for tabular data. Section~\ref{sec:method} formalises the
+flow-matching augmenter. Section~\ref{sec:setup} details datasets, baselines,
+and the evaluation protocol. Section~\ref{sec:results} reports results,
+ablations, and synthetic-quality diagnostics. Section~\ref{sec:discussion}
+examines where augmentation helps and where it cannot, and
+Section~\ref{sec:conclusion} concludes.
+
+%==============================================================================
+\section{Related Work}\label{sec:related}
+%==============================================================================
+% TODO
+\section{Method}\label{sec:method}
+% TODO
+\section{Experimental Setup}\label{sec:setup}
+% TODO
+\section{Results}\label{sec:results}
+% TODO
+\section{Discussion}\label{sec:discussion}
+% TODO
+\section{Conclusion}\label{sec:conclusion}
+% TODO
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}
