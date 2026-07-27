@@ -4,7 +4,17 @@ Running record of what has been established, built, and measured.
 Every number here was computed from public data on this machine and is
 reproducible from the scripts in `experiments/`.
 
-**Last updated:** 2026-07-26
+**Last updated:** 2026-07-28
+
+This is a living record. Everything measured goes in — results that supported the
+hypothesis and results that did not, bugs found in our own code, claims of ours
+that later proved wrong, and practical limits hit along the way. The failures are
+recorded as carefully as the findings: they are what makes it possible to answer
+"did you check X?" with evidence rather than recollection.
+
+**Raw numbers live in `results/` (gitignored, regenerable). Anything needed to
+defend a claim is copied into this file**, because re-running the experiments
+costs hours and a result that exists only in a log is a result that will be lost.
 
 ---
 
@@ -314,6 +324,100 @@ Note the last row. Across three datasets the rare-class failure has three
 different causes, and **none of them is a shortage of training examples.** The
 field's standard remedy addresses a cause that, on this evidence, is rarely the
 operative one.
+
+---
+
+## 3b. Generator diagnostics (raw measurements)
+
+Kept in full because several are needed to defend claims elsewhere, and because
+re-running them costs hours.
+
+### Flow-matching sample quality, NSL-KDD
+
+Detection AUC is a random forest separating synthetic from real (0.5 =
+indistinguishable). NN ratio is mean synthetic→real nearest-neighbour distance
+divided by real→real; below 1 means samples sit closer to real points than real
+points sit to each other.
+
+| class | n_real | detection AUC | NN ratio | KS median | verdict |
+|---|---|---|---|---|---|
+| r2l | 995 | 0.9996 | 21.40 | 0.113 | FAIL |
+| u2r | 52 | 0.9834 | 2.61 | 0.183 | FAIL |
+| probe | 11,656 | 1.0000 | 26.68 | 0.119 | FAIL |
+
+For comparison, on the same test:
+
+| method | class | detection AUC | NN ratio | KS median |
+|---|---|---|---|---|
+| SMOTE | r2l | **0.5354** | **0.634** | 0.011 |
+| SMOTE | u2r | 0.7934 | **0.524** | 0.058 |
+| ADASYN | r2l | 0.9894 | 9.54 | 0.203 |
+| ADASYN | u2r | 1.0000 | 1.21 | 0.103 |
+
+**SMOTE's sub-1.0 NN ratio is structural**: its samples are interpolations
+between two real points and therefore cannot leave the data manifold. That is the
+most plausible explanation for why a 2002 method remains competitive against
+learned generators.
+
+### Per-type generation vs per-class, NSL-KDD
+
+| class | metric | whole-class | per-type | coverage |
+|---|---|---|---|---|
+| r2l | detection AUC | 0.9996 | 0.9835 | 97% (3 of 8 types) |
+| r2l | NN ratio | 21.40 | **7.14** | |
+| r2l | KS median | 0.113 | **0.061** | |
+| u2r | detection AUC | 0.9834 | 0.9642 | 58% (1 of 4 types) |
+| u2r | NN ratio | 2.61 | **1.98** | |
+
+Fitting per attack type improved every quality measure — confirming the
+mixture-fitting diagnosis — but did not close the gap. Types below 20 training
+rows are not modelled; on U2R only `buffer_overflow` clears that bar, leaving
+42% of the class ungenerated.
+
+### Training converges; the gap is structural, not undertraining
+
+Flow-matching loss on NSL-KDD u2r, against an irreducible floor of ~1.31 (the
+target `x1 - x0` is stochastic, so the model can only predict its conditional
+mean):
+
+    epoch    1   loss 1.266      epoch  600   loss 0.373
+    epoch   50   loss 1.022      epoch  900   loss 0.377
+    epoch  150   loss 0.633      epoch 1200   loss 0.347
+    epoch  300   loss 0.446
+
+Longer training improves distance and marginals substantially — on r2l, 300→4800
+epochs moved NN ratio 23.0→12.8 and KS median 0.146→0.063 — **but detection AUC
+stayed at 0.9996 throughout.** Samples get closer to the real distribution
+without becoming any harder to identify. That rules out undertraining as the
+explanation and supports the structural reading: a continuous flow cannot
+concentrate mass onto the dense, near-duplicate clusters network traffic forms.
+
+### GPU batch-size scaling (probe class, 50 epochs)
+
+| batch | ms/epoch | speedup | peak VRAM |
+|---|---|---|---|
+| 256 | 680 | — | 39 MiB |
+| 1,024 | 148 | 4.6× | 52 MiB |
+| **4,096** | **47** | **14.5×** | 105 MiB |
+| 11,656 (full) | 34 | 20× | 237 MiB |
+
+CPU baseline ~1,300 ms/epoch, so batch 4,096 on GPU is ~28×. The initial
+measurement of only 1.4× was batch size, not the GPU: at batch 256 a 512-wide MLP
+spends almost all its time on kernel launches — 180 per epoch on the DoS class.
+
+### Runtime, CICIDS2017 (1.98M train rows, ~3M augmented)
+
+| arm | seconds/seed |
+|---|---|
+| none | 93 |
+| random_oversample | 141–151 |
+| smote | 245–325 |
+| flowmatch (chunked) | 230–475 |
+| flowmatch_pertype | 227–457 |
+| **adasyn** | **2,408–4,779** |
+
+Before chunked sampling, `flowmatch` took 20,898s / 962s / 4,287s for identical
+cached-generator work.
 
 ---
 
