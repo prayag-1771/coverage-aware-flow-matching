@@ -35,6 +35,21 @@ def _device() -> torch.device:
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+# A 512-wide MLP at batch 256 cannot saturate a GPU: measured peak VRAM was 39 MiB of
+# 4096, and per-epoch time was only 1.4x faster than CPU because nearly all of it went
+# to kernel-launch overhead rather than arithmetic. On the 45,927-row DoS class that is
+# 180 launches per epoch. Larger batches amortise the overhead. CPU gains nothing from
+# this -- large batches there just reduce gradient-update frequency -- so the default
+# is device-dependent.
+DEFAULT_BATCH_GPU = 4096
+DEFAULT_BATCH_CPU = 256
+
+
+def default_batch_size(device: torch.device | None = None) -> int:
+    dev = device or _device()
+    return DEFAULT_BATCH_GPU if dev.type == "cuda" else DEFAULT_BATCH_CPU
+
+
 # Columns with at most this many distinct values are transported as categorical
 # rather than continuous. On NSL-KDD this captures binary flags (land, root_shell,
 # logged_in) and small counts (num_shells, su_attempted).
@@ -126,7 +141,7 @@ class TabularFlowMatcher:
     hidden: int = 512
     depth: int = 3
     epochs: int = 300
-    batch_size: int = 256
+    batch_size: int | None = None  # None -> device-appropriate default
     lr: float = 1e-3
     steps: int = 50
     seed: int = 0
@@ -243,7 +258,8 @@ class TabularFlowMatcher:
         opt = torch.optim.Adam(model.parameters(), lr=self.lr)
         X = X.to(dev)
         n = len(X)
-        batch = min(self.batch_size, n)
+        requested = self.batch_size or default_batch_size(dev)
+        batch = min(requested, n)
 
         model.train()
         for _ in range(self.epochs):
