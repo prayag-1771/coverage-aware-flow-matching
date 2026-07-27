@@ -305,6 +305,49 @@ two `flowmatch` seeds while Bot moved 0.002. The swing is Infiltration (11 test
 rows) or Heartbleed (3) flipping between ~1.0 and 0. Per-class figures with
 support reported are the only reliable readout.
 
+### 3.3b All 90 runs: best arm per rare class
+
+Three datasets, six arms, five seeds, one pipeline. Nine rare classes with usable
+test support.
+
+| dataset | class | best arm | F1 | vs no augmentation |
+|---|---|---|---|---|
+| NSL-KDD | R2L | flowmatch_pertype | 0.2634 | +0.071 |
+| NSL-KDD | U2R | **SMOTE** | 0.4279 | +0.209 |
+| UNSW | Analysis | **ADASYN** | 0.0744 | +0.029 |
+| UNSW | Backdoor | flowmatch_pertype | 0.1123 | +0.044 |
+| UNSW | Shellcode | flowmatch_pertype | 0.5127 | +0.017 |
+| UNSW | Worms | **random oversample** | 0.7196 | +0.205 |
+| CICIDS | **Bot** | **none** | **0.8218** | **+0.000** |
+| CICIDS | WebAttack | random oversample | 0.9920 | +0.008 |
+| CICIDS | BruteForce | random oversample | 0.9997 | +0.000 |
+
+**Five different methods win across nine classes.** Plain duplication — the
+crudest possible approach — wins three. On CICIDS2017's only class with real
+headroom, **doing nothing wins outright**.
+
+CICIDS2017 Bot in full, since it is the cleanest test in the project (1,369
+training rows, 587 test rows, 1:1,161 imbalance):
+
+| arm | Bot F1 | sd |
+|---|---|---|
+| **none** | **0.8218** | 0.0072 |
+| random oversample | 0.8167 | 0.0060 |
+| flowmatch_pertype | 0.7910 | **0.0796** |
+| flowmatch | 0.7876 | **0.0828** |
+| SMOTE | 0.7829 | 0.0016 |
+| ADASYN | 0.7806 | 0.0011 |
+
+Every augmentation method underperforms the unaugmented baseline. The two flow
+arms carry standard deviations ~50× ADASYN's — the 1-in-5 instability surfacing
+as a headline number.
+
+**The degenerate-fit detector mattered.** It flagged `none` seed 4 automatically
+and reported "20% of seeds failed to train" rather than folding it into the mean.
+Averaged in, the `none` arm reads macro-F1 0.775 instead of 0.943 — which would
+have made doing nothing look far worse than it is and **quietly reversed the main
+conclusion of the table above.**
+
 ### 3.4 The three datasets disagree
 
 | | NSL-KDD | UNSW-NB15 | CICIDS2017 |
