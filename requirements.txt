@@ -1,3 +1,4 @@
+# Core
 imbalanced-learn==0.14.2
 joblib==1.5.3
 numpy==2.2.6
@@ -7,3 +8,32 @@ scipy==1.17.1
 tabulate==0.10.0
 threadpoolctl==3.6.0
 xgboost==3.2.0
+
+# PyTorch, CUDA 12.4 build. NOT resolvable from PyPI -- a plain `pip install
+# torch` yields a CPU-only build, and flow matching then runs on CPU silently,
+# with no error or warning. Install with:
+#
+#   pip install --index-url https://download.pytorch.org/whl/cu124 torch==2.6.0+cu124
+#
+# On a slow or unreliable connection, fetch the wheel with curl first (pip does
+# not resume a failed download; curl does) and install the local file:
+#
+#   curl -L -C - --retry 20 --retry-all-errors \
+#     -o torch-2.6.0+cu124-cp311-cp311-win_amd64.whl \
+#     https://download.pytorch.org/whl/cu124/torch-2.6.0%2Bcu124-cp311-cp311-win_amd64.whl
+#
+# The output filename must be the canonical wheel name; pip rejects anything
+# else with "Invalid wheel filename (wrong number of parts)".
+#
+# CPU-only environments are fine -- everything runs, just slower.
+# src/models/classifier.py selects the device automatically, and every
+# experiment logs which device it used.
+torch==2.6.0+cu124
+
+# pandas is held at 2.2.3 deliberately. 3.0.5 is blocked by Windows Application
+# Control on this machine: "ImportError: DLL load failed while importing
+# pandas_parser".
+
+# Transitive dependencies of torch (filelock, fsspec, Jinja2, mpmath, networkx,
+# sympy, typing-extensions) are left unpinned so pip resolves them against
+# whichever torch build is installed.
