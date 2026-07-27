@@ -49,6 +49,27 @@ generalising are not entitled to.
 
 *Reproduce:* `experiments/05_unsw_comparison.py`
 
+### 1.0b Undersampling the majority makes rare-class detection worse
+
+The first step of nearly every imbalance pipeline is to cut the majority class
+down. Measured on CICIDS2017, one seed, identical in every other respect:
+
+| | rows | Bot imbalance | macro-F1 | **Bot F1** |
+|---|---|---|---|---|
+| **uncapped** (full BENIGN) | 1,979,513 | **1:1,161** | **0.9605** | **0.822** |
+| BENIGN capped at 100,000 | 489,589 | 1:129 | 0.9455 | 0.761 |
+
+**The version with ninefold worse nominal imbalance detects the rare class
+better.** Discarding majority data to improve a class ratio costs 0.06 F1 on the
+rarest usable class — the extra majority data sharpens the decision boundary,
+and the ratio is not what the classifier is limited by.
+
+This finding invalidated our own design: the first CICIDS2017 run capped BENIGN
+purely for tractability and was measuring an artifact of that choice. Replaced
+with a cap on the *oversampling target* instead, which keeps every real row.
+
+*Reproduce:* `src/augment/resampling.py::_target_counts`, `experiments/06`
+
 ### 1.1 Synthetic-sample fidelity does not predict downstream utility
 
 The implicit justification for preferring a generative model over simple
@@ -229,17 +250,70 @@ Test support: Analysis 677, Backdoor 583, Shellcode 378, Worms 44.
   per-class. The control behaving as expected supports coverage being the real
   mechanism behind their divergence on NSL-KDD.
 
-### 3.3 The two datasets disagree
+### 3.3 CICIDS2017 — stratified 70/30 split on the fine label (GPU)
 
-| | NSL-KDD | UNSW-NB15 |
+Train 1,979,513 / test 848,363. BENIGN never downsampled; minority classes lifted
+to 176,198 (see §1.0b). Augmented training sets are 2,999,508 rows.
+
+**Bot F1** — the only class with meaningful headroom. WebAttack sits at
+0.980 and BruteForce at 0.999 before any augmentation, so neither can move.
+
+| arm | Bot F1 (clean seeds) | vs baseline |
 |---|---|---|
-| SMOTE vs no augmentation | **improves** every rare class | **degrades** macro-F1 and 2 of 4 rare classes |
-| best macro-F1 | SMOTE (0.627) | random oversample (0.526) |
-| flow matching vs SMOTE | loses | wins 3 of 4 rare classes |
+| flowmatch_pertype | **0.827** | +0.005 |
+| flowmatch | 0.825 | +0.003 |
+| none | 0.822 | — |
+| random oversample | 0.817 | −0.005 |
+| SMOTE | 0.783 | **−0.039** |
+| ADASYN | 0.780 | **−0.042** |
 
-Any claim of the form "method X helps with class imbalance in IDS", drawn from a
-single benchmark, is unsupported. This is measurable with the pipeline here and
-is a result in its own right.
+**Flow matching ties the unaugmented baseline.** It does not improve on doing
+nothing, on the dataset offering the best conditions it has had. Both
+interpolation methods degrade the rare class by ~0.04, tightly and consistently
+(ADASYN across three seeds: 0.780, 0.779, 0.781).
+
+The defensible statement here is not that flow matching wins, but that **the
+standard resamplers actively hurt and flow matching does not.**
+
+**Training instability, ~1 seed in 5.** Two distinct failure modes, both silent —
+no exception, no warning, GPU neither idle nor out of memory:
+
+| arm | seeds | note |
+|---|---|---|
+| none | 0.822 ×4, **macro-F1 0.0996** ×1 | total collapse: predicts only BENIGN |
+| flowmatch | 0.831, **0.640**, 0.817, 0.824, 0.826 | partial collapse |
+| flowmatch_pertype | 0.823, 0.833, 0.817, 0.833, **0.649** | partial collapse |
+
+The `none` collapse reproduces exactly across three independent runs, so it is a
+property of that fit, not noise. **A single-seed study would either miss this
+entirely or publish the failed run as a result.** Detected by
+`is_degenerate()` in `src/eval/metrics.py` and reported as a failure rate rather
+than averaged in — including it drags the `none` arm from 0.944 to 0.775.
+
+**macro-F1 is not trustworthy on this dataset.** It swung 0.9698 → 0.8351 between
+two `flowmatch` seeds while Bot moved 0.002. The swing is Infiltration (11 test
+rows) or Heartbleed (3) flipping between ~1.0 and 0. Per-class figures with
+support reported are the only reliable readout.
+
+### 3.4 The three datasets disagree
+
+| | NSL-KDD | UNSW-NB15 | CICIDS2017 |
+|---|---|---|---|
+| SMOTE vs no augmentation | **improves** every rare class | **degrades** 2 of 4 | **degrades** Bot (−0.039) |
+| best macro-F1 | SMOTE | random oversample | ADASYN (worst on Bot) |
+| flow matching vs SMOTE | loses | wins 3 of 4 rare classes | wins (+0.042) |
+| flow matching vs doing nothing | wins | wins 3 of 4 | **ties** |
+| why rare classes fail | train/test attack types disjoint | classes overlap in feature space | they mostly don't fail |
+
+**SMOTE helps on one benchmark and hurts on the other two, measured through an
+identical pipeline with identical seeds.** Any claim of the form "method X helps
+with class imbalance in IDS" drawn from a single benchmark is therefore
+unsupported — and single-benchmark evaluation is the norm in this literature.
+
+Note the last row. Across three datasets the rare-class failure has three
+different causes, and **none of them is a shortage of training examples.** The
+field's standard remedy addresses a cause that, on this evidence, is rarely the
+operative one.
 
 ---
 
@@ -257,6 +331,54 @@ Recorded because each was caught by measurement rather than assumed.
 | 6 | Memorisation check broadcast an n×n×d array | 59 GiB allocation, crash | `NearestNeighbors` index |
 | 7 | Generators refitted per seed | Hours of duplicated training | Cache on (arm, class, generator seed, n) |
 | 8 | `.gitignore` rule `data/` also matched `src/data/` | Source package silently untracked | Anchored to `/data/` |
+| 9 | UNSW loader kept the CSV's own binary `label` column as a feature | Classifier handed the answer; a meaningless ~99% | Take target from `attack_cat`, drop binary label |
+| 10 | UNSW CSV has a UTF-8 BOM | First column parses as `﻿id`, intended drop misses it | `encoding="utf-8-sig"` |
+| 11 | CICIDS2017 `Web Attack` labels are cp1252-encoded | Three classes fail to map, fragment or raise | Normalise `U+FFFD` on load |
+| 12 | `Flow Bytes/s` contains `Infinity` where duration is 0 | Passes pandas silently, breaks StandardScaler | Replace with NaN, drop (~0.1% rows) |
+| 13 | `SMOTENC` hard-coded; CICIDS2017 is all-numeric | Run died 15 min in with a `ValueError` | Select plain `SMOTE` when no categoricals |
+| 14 | Majority capped at 100k for tractability | Measured an artifact of our own choice (§1.0b) | Cap the oversampling target instead |
+| 15 | Flow sampling built all ~176k rows in one tensor | 94% VRAM; identical work took 20,898s / 962s / 4,287s | Chunk at 32,768 rows, free cache between |
+| 16 | Results written only after all 30 runs | A kill during a slow arm discarded every completed run | Flush both CSVs after every run |
+| 17 | Ran a diagnostic alongside the main job on 8 GB RAM | Free RAM hit 1.8 GB; main run died at 5/30 | One heavy job at a time |
+
+---
+
+## 4b. Wrong turns and corrections to our own claims
+
+Recorded because the reasoning matters as much as the result, and because each
+was caught by measurement rather than argument.
+
+**"The DiffIDS idea is novel."** It was not. ~25 searches found diffusion for IDS
+imbalance occupied by ~10 papers (2023–2026), including one named Diff-IDS on the
+same three datasets, plus TabPFN for IDS already taken. Cost: one search session.
+Value: avoided months building a duplicate.
+
+**"Diff-IDS is the base paper."** Wrong choice — it is a competing method with no
+released code, in a Q2/Q3 venue. Corrected to Alsubaei (Sci. Reports, Q1), which
+uses the same datasets and whose own results show tuning does not fix rare
+classes. Caught only because the user asked which paper we were building on.
+
+**"Augmentation cannot help NSL-KDD R2L at all."** Overstated. 89% of R2L training
+data is `warezclient` with zero test samples, which is true — but the remaining
+105 rows (`guess_passwd`, `warezmaster`) map to 75% of the R2L test set, and
+SMOTE/ADASYN did improve R2L by ~0.05. The sharper and correct claim is that
+R2L's *effective* training size is ~105 rows, not 995, so the real imbalance is
+~1:641 rather than 1:68.
+
+**"The quality gate should block bad generators."** Wrong, and following it would
+have discarded ADASYN — the best R2L performer — since its synthetic data is
+identified as fake 100% of the time. Gate demoted from blocking checkpoint to
+reported diagnostic.
+
+**"GPU will give flow matching 5–10×."** It gave 1.4×, because a 512-wide MLP at
+batch 256 cannot saturate the device — peak VRAM was 39 MiB of 4,096. After
+raising the batch to 4,096 the speedup was 14× and the original estimate was
+recovered. The estimate was right; the configuration was wrong.
+
+**"The Bot 0.640 outlier is a memory-saturation artifact."** Wrong. It fit the
+timing data, so it was the convenient explanation — then `flowmatch_pertype` seed
+4 produced 0.649 under normal memory conditions and fast runtime. The instability
+is real and occurs in ~1 seed of 5 in both flow arms.
 
 ---
 
@@ -271,6 +393,34 @@ Recorded because each was caught by measurement rather than assumed.
   because they evaluate on a subset split rather than the official test split.
 - **Dataset integrity confirmed** by row count: `KDDTrain+` 125,973,
   `KDDTest+` 22,544, `KDDTrain+_20Percent` 25,192 — all canonical.
+
+---
+
+## 5b. Practical limits found the hard way
+
+Worth reporting: these are constraints anyone reproducing this work will hit, and
+none of them appear in the papers that use these methods.
+
+**ADASYN does not scale to 2M rows.** It fits a nearest-neighbour index over the
+whole training set and queries it per minority sample; in 78 dimensions spatial
+trees degrade to brute force. 150s per seed on UNSW's 175k rows, **2,400–4,800s
+per seed on CICIDS2017's 1.98M** — and one aborted attempt exceeded 25 minutes
+without finishing. Papers applying ADASYN to CICIDS2017 are either subsampling
+heavily or not saying so.
+
+**Flow matching saturates a 4 GB GPU on CICIDS2017.** Unchunked sampling held the
+card at 94% and made runtimes meaningless: 20,898s, 962s and 4,287s for identical
+cached-generator work. Chunking fixed it — the same work then took 475s and 230s.
+
+**Windows Application Control blocks recent binary wheels.** pandas 3.0.5 and the
+current pyarrow both fail with `DLL load failed ... blocked by Application
+Control`. Pinned to pandas 2.2.3 and pyarrow 15.0.2.
+
+**`pip install torch` yields a CPU build silently.** No error, no warning — flow
+matching simply runs on CPU. Cost most of a session before it was noticed. The
+CUDA build needs `--index-url https://download.pytorch.org/whl/cu124`, and pip
+will not swap builds when version numbers match, so uninstall first. The 2.4 GB
+download failed twice under pip (no resume); `curl -C -` at ~2 MB/s worked.
 
 ---
 
@@ -297,14 +447,40 @@ only 58 % (1 of 4 types)**.
 
 ## 7. What is not done
 
-- Flow-matching downstream result — running
-- CTGAN and TabDDPM comparison arms — not built
-- UNSW-NB15 and CICIDS2017 — not loaded; **headline claims depend on these**
-- Ablations, significance testing, SHAP
-- All paper sections except the Introduction
-- Bibliography verification — entries assembled from landing pages, not
-  publisher exports
-- Cross-dataset transfer (deferred; see `PLAN.md` §9)
+Roughly 40% of the experiments and 90% of the writing remain.
+
+**Experiments**
+- **CTGAN and TabDDPM arms — the largest gap.** The stated novelty is that
+  diffusion has been applied ~10 times and flow matching has not. **Without a
+  diffusion baseline that comparison cannot be made at all**, and a reviewer will
+  ask for it first. 3 datasets × 2 arms × 5 seeds = 30 runs.
+- Ablations: synthetic ratio (25/50/100%), ODE step count. Everything currently
+  runs at full rebalancing and 50 steps with no justification beyond default.
+- Significance testing (Wilcoxon signed-rank). Several reported differences are
+  currently inside the noise and a reviewer can dismiss them.
+- SHAP — not started.
+- Re-run CICIDS2017 `flowmatch` seeds 0–2, which were measured under GPU memory
+  saturation while seeds 3–4 were not. Mixing regimes within one arm is not
+  defensible even though it does not change the conclusion.
+- Diagnose the ~1-in-5 degenerate fits rather than only detecting them.
+
+**Paper**
+- Only the Introduction exists. Related Work, Method, Experiments, Results,
+  Discussion, Conclusion unwritten.
+- Bibliography verification — entries assembled from landing pages, not publisher
+  exports; several fields marked `% CHECK`.
+- Re-run the novelty search before submission. The field is moving: a directly
+  relevant paper appeared 9 days before this project started.
+- Repo cleanup and reproduction instructions.
+- Cross-dataset transfer (deferred; see `PLAN.md` §9).
+
+**Decision, not work:** the results no longer support a method paper. Flow
+matching loses on NSL-KDD, wins 3 of 4 rare classes on UNSW, and ties the
+baseline on CICIDS2017. The strongest material is now §1.0–§1.4 and §3.4. Which
+paper gets written changes what is still needed — a method paper needs TabDDPM
+urgently; an empirical paper needs the significance tests and less of the
+baseline zoo. **That is a supervisor decision and should be taken before more
+compute is spent.**
 
 ---
 
