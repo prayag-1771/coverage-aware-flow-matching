@@ -20,7 +20,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.augment.resampling import ARMS, augment
-from src.models.classifier import make_xgb
+from src.models.classifier import active_device, make_xgb
 from src.data.nsl_kdd import (
     CATEGORICAL_COLUMNS,
     CLASS_ORDER,
@@ -86,7 +86,9 @@ def main() -> None:
     summary_rows = []
 
     print(f"\nArms: {ARMS}")
-    print(f"Seeds: {SEEDS}   (train n = {len(train):,})\n")
+    print(f"Seeds: {SEEDS}   (train n = {len(train):,})")
+    print(f"Classifier device: {active_device()}   "
+          f"(override with DIFFIDS_DEVICE=cpu|cuda)\n")
 
     for arm in ARMS:
         for seed in SEEDS:
