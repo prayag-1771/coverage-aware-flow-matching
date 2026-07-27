@@ -25,14 +25,26 @@ ARMS = ["none", "random_oversample", "smote", "adasyn", "flowmatch", "flowmatch_
 GENERATIVE_ARMS = {"flowmatch", "flowmatch_pertype"}
 
 
-def _target_counts(y: pd.Series, ratio: float) -> dict:
+def _target_counts(
+    y: pd.Series, ratio: float, max_target: int | None = None
+) -> dict:
     """Resample every minority class up to `ratio` x the majority class size.
 
     Classes already at or above the target are left untouched -- imbalanced-learn
     raises if a sampling target is below a class's current count.
+
+    `max_target` caps the target without discarding data. On CICIDS2017 the majority
+    class holds 1.59M rows, so full parity would build a 14.3M-row training set and
+    make Heartbleed 99.9995% synthetic. The obvious alternative -- undersampling the
+    majority -- was measured and is actively harmful: capping BENIGN at 100k dropped
+    Bot F1 from 0.822 to 0.761 despite improving the nominal imbalance ninefold. The
+    extra majority data sharpens the decision boundary, so it is kept and the
+    oversampling target is capped instead.
     """
     counts = y.value_counts()
     target = int(counts.max() * ratio)
+    if max_target is not None:
+        target = min(target, max_target)
     return {cls: max(int(n), target) for cls, n in counts.items()}
 
 
@@ -48,6 +60,7 @@ def augment(
     seed: int = 42,
     ratio: float = 1.0,
     types: pd.Series | None = None,
+    max_target: int | None = None,
 ) -> tuple[pd.DataFrame, pd.Series]:
     """Apply one augmentation arm to a *training* split.
 
@@ -70,7 +83,7 @@ def augment(
     if arm == "none":
         return X.reset_index(drop=True), y.reset_index(drop=True)
 
-    sampling_strategy = _target_counts(y, ratio)
+    sampling_strategy = _target_counts(y, ratio, max_target)
 
     if arm in GENERATIVE_ARMS:
         # generator_seed defaults to 0, so every classifier seed shares one fitted

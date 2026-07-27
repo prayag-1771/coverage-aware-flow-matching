@@ -12,12 +12,20 @@ Two properties neither NSL-KDD nor UNSW-NB15 has:
    (~15 training rows) falls below the per-type modelling threshold, so WebAttack
    coverage is high but incomplete, exactly the NSL-KDD R2L situation.
 
-**Majority subsampling.** Rebalancing to BENIGN's 1,589,924 would produce a 14.3M-row
-training set and make Heartbleed 99.9995% synthetic. BENIGN is therefore capped at
-`MAJORITY_CAP` and all classes rebalanced to that, giving ~900k rows -- comparable in
-scale to UNSW's 560k. Every attack sample is preserved; only BENIGN is subsampled,
-which is standard practice on this dataset. This is a documented deviation from the
-NSL-KDD and UNSW runs, where the majority class was small enough not to need it.
+**No majority undersampling.** Full parity with BENIGN's 1,589,924 would build a 14.3M-row
+training set and make Heartbleed 99.9995% synthetic. The standard remedy -- undersample
+the majority -- was measured and is actively harmful here:
+
+    uncapped (full BENIGN)   n=1,979,513   Bot imbalance 1:1161   macro-F1 0.9605   Bot F1 0.822
+    BENIGN capped at 100k    n=  489,589   Bot imbalance 1: 129   macro-F1 0.9455   Bot F1 0.761
+
+The version with ninefold *worse* nominal imbalance detects the rare class better. The
+additional majority data sharpens the decision boundary; discarding it to improve a class
+ratio costs 0.06 F1 on the rarest usable class. Since undersampling the majority is the
+usual first step in imbalance pipelines, that is a result in its own right.
+
+All real data is therefore kept and `OVERSAMPLE_TARGET` caps how far minority classes are
+lifted instead. Training sets land near 3M rows.
 
 Run:  .venv/Scripts/python.exe -u experiments/06_cicids_comparison.py
 """
@@ -49,28 +57,22 @@ from src.models.classifier import active_device, make_xgb
 
 RESULTS_DIR = Path(__file__).resolve().parents[1] / "results"
 SEEDS = [0, 1, 2, 3, 4]
-MAJORITY_CAP = 100_000
 SPLIT_SEED = 42
+
+# Minority classes are lifted to this many rows rather than to BENIGN's 1,589,924.
+# Chosen as roughly the largest attack class (DoS, 176,198) so the attack classes end up
+# balanced against each other while BENIGN is left entirely intact.
+OVERSAMPLE_TARGET = 176_198
 
 # All features are numeric here -- CICFlowMeter emits no categorical columns, unlike
 # NSL-KDD's protocol_type/service/flag and UNSW's proto/service/state.
 CATEGORICAL_COLUMNS: list[str] = []
 
 
-def subsample_majority(df: pd.DataFrame, cap: int, seed: int) -> pd.DataFrame:
-    """Cap the largest class. Attack classes are never touched."""
-    counts = df["label"].value_counts()
-    majority = counts.index[0]
-    if counts.iloc[0] <= cap:
-        return df
-    keep = df[df["label"] == majority].sample(n=cap, random_state=seed)
-    return pd.concat([df[df["label"] != majority], keep], ignore_index=True)
-
-
 def run_one(train, test, features, arm, seed):
     X_aug, y_aug = augment(
         train[features], train["label"], arm, CATEGORICAL_COLUMNS,
-        seed=seed, types=train["fine_label"],
+        seed=seed, types=train["fine_label"], max_target=OVERSAMPLE_TARGET,
     )
 
     prep = Preprocessor(CATEGORICAL_COLUMNS, features)
@@ -96,13 +98,13 @@ def main() -> None:
     warnings.filterwarnings("ignore")
 
     df = load_cicids2017()
-    train_full, test = stratified_split(df, test_size=0.3, seed=SPLIT_SEED)
-    train = subsample_majority(train_full, MAJORITY_CAP, SPLIT_SEED)
+    train, test = stratified_split(df, test_size=0.3, seed=SPLIT_SEED)
     features = feature_columns(df)
 
     print(f"\nCICIDS2017  {len(df):,} rows, {len(features)} features")
-    print(f"train {len(train_full):,} -> {len(train):,} after capping BENIGN "
-          f"at {MAJORITY_CAP:,}   test {len(test):,}")
+    print(f"train {len(train):,} (BENIGN intact, never downsampled)   "
+          f"test {len(test):,}")
+    print(f"Minority classes lifted to {OVERSAMPLE_TARGET:,}")
     print(f"Arms: {ARMS}\nSeeds: {SEEDS}\nClassifier device: {active_device()}")
     print(f"Rare classes: {RARE_CLASSES}   "
           f"excluded from claims: {UNRELIABLE_CLASSES}\n")
