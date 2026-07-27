@@ -59,6 +59,21 @@ RESULTS_DIR = Path(__file__).resolve().parents[1] / "results"
 SEEDS = [0, 1, 2, 3, 4]
 SPLIT_SEED = 42
 
+# ADASYN runs last here, unlike on the smaller datasets. It fits a nearest-neighbour
+# index over all 1.98M training rows and queries it per minority sample; in 78
+# dimensions spatial trees degrade to brute force, so cost grows roughly quadratically.
+# Measured: 150s on UNSW's 175k rows, over 25 minutes per seed here. Ordering it after
+# the flow-matching arms means the results this project turns on land first, and ADASYN
+# can be abandoned without losing them.
+ARM_ORDER = [
+    "none",
+    "random_oversample",
+    "smote",
+    "flowmatch",
+    "flowmatch_pertype",
+    "adasyn",
+]
+
 # Minority classes are lifted to this many rows rather than to BENIGN's 1,589,924.
 # Chosen as roughly the largest attack class (DoS, 176,198) so the attack classes end up
 # balanced against each other while BENIGN is left entirely intact.
@@ -105,14 +120,14 @@ def main() -> None:
     print(f"train {len(train):,} (BENIGN intact, never downsampled)   "
           f"test {len(test):,}")
     print(f"Minority classes lifted to {OVERSAMPLE_TARGET:,}")
-    print(f"Arms: {ARMS}\nSeeds: {SEEDS}\nClassifier device: {active_device()}")
+    print(f"Arms: {ARM_ORDER}\nSeeds: {SEEDS}\nClassifier device: {active_device()}")
     print(f"Rare classes: {RARE_CLASSES}   "
           f"excluded from claims: {UNRELIABLE_CLASSES}\n")
 
     per_class_rows, summary_rows = [], []
     clear_generator_cache()
 
-    for arm in ARMS:
+    for arm in ARM_ORDER:
         for seed in SEEDS:
             t0 = time.time()
             table, summary, n_train = run_one(train, test, features, arm, seed)
@@ -126,6 +141,15 @@ def main() -> None:
                   f"macroF1={summary['macro_f1']:.4f}  {rare}  "
                   f"({time.time()-t0:.0f}s)", flush=True)
 
+            # Flush after every run. Writing only at the end means a crash or a kill
+            # during a slow arm discards every completed result; that happened once
+            # here already.
+            RESULTS_DIR.mkdir(exist_ok=True)
+            pd.DataFrame(per_class_rows).to_csv(
+                RESULTS_DIR / "cicids_resampling_per_class.csv", index=False)
+            pd.DataFrame(summary_rows).to_csv(
+                RESULTS_DIR / "cicids_resampling_summary.csv", index=False)
+
     per_class = pd.DataFrame(per_class_rows)
     summaries = pd.DataFrame(summary_rows)
 
@@ -133,7 +157,7 @@ def main() -> None:
     print("SUMMARY (mean +/- std over 5 seeds)")
     print("=" * 88)
     print(summaries.groupby("arm")[["accuracy", "balanced_accuracy", "macro_f1"]]
-          .agg(["mean", "std"]).reindex(ARMS).round(4).to_string())
+          .agg(["mean", "std"]).reindex(ARM_ORDER).round(4).to_string())
 
     print("\n" + "=" * 88)
     print("RARE-CLASS F1 (mean +/- std over 5 seeds)")
@@ -144,7 +168,7 @@ def main() -> None:
         flag = "  [UNRELIABLE - too few test samples]" if cls in UNRELIABLE_CLASSES else ""
         print(f"\n{cls}  (test support = {support}){flag}")
         print(sub.groupby("arm")[["precision", "recall", "f1"]]
-              .agg(["mean", "std"]).reindex(ARMS).round(4).to_string())
+              .agg(["mean", "std"]).reindex(ARM_ORDER).round(4).to_string())
 
     print("\n" + "=" * 88)
     print("DELTA vs NO AUGMENTATION (rare-class F1)")
@@ -153,7 +177,7 @@ def main() -> None:
         sub = per_class[per_class["class"] == cls]
         base = sub[sub["arm"] == "none"]["f1"].mean()
         print(f"\n{cls}  baseline F1 = {base:.4f}")
-        for arm in ARMS:
+        for arm in ARM_ORDER:
             if arm == "none":
                 continue
             f1 = sub[sub["arm"] == arm]["f1"].mean()
