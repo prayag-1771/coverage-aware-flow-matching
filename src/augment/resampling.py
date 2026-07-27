@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from imblearn.over_sampling import ADASYN, SMOTENC, RandomOverSampler
+from imblearn.over_sampling import ADASYN, SMOTE, SMOTENC, RandomOverSampler
 
 ARMS = ["none", "random_oversample", "smote", "adasyn", "flowmatch", "flowmatch_pertype"]
 
@@ -102,13 +102,24 @@ def augment(
         # rows here; on a smaller subset the default k=5 would raise.
         k = min(5, max(1, _min_class_count(y) - 1))
         if arm == "smote":
-            cat_idx = [X.columns.get_loc(c) for c in categorical_columns]
-            sampler = SMOTENC(
-                categorical_features=cat_idx,
-                sampling_strategy=sampling_strategy,
-                random_state=seed,
-                k_neighbors=k,
-            )
+            if categorical_columns:
+                sampler = SMOTENC(
+                    categorical_features=[
+                        X.columns.get_loc(c) for c in categorical_columns
+                    ],
+                    sampling_strategy=sampling_strategy,
+                    random_state=seed,
+                    k_neighbors=k,
+                )
+            else:
+                # SMOTENC raises when handed an all-numeric frame. CICFlowMeter
+                # datasets (CICIDS2017) have no categorical features, so plain SMOTE
+                # is both correct and required there.
+                sampler = SMOTE(
+                    sampling_strategy=sampling_strategy,
+                    random_state=seed,
+                    k_neighbors=k,
+                )
         else:  # adasyn
             # ADASYN has no categorical-aware variant. Encode categoricals as integer
             # codes derived from the training split, resample, then map back. Codes are
