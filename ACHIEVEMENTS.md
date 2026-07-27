@@ -10,7 +10,44 @@ reproducible from the scripts in `experiments/`.
 
 ## 1. Findings
 
-Four results that did not exist before this work. Listed strongest first.
+Results that did not exist before this work. Listed strongest first.
+
+### 1.0 SMOTE and ADASYN can be worse than no augmentation at all
+
+On UNSW-NB15, both standard resamplers score **below the unaugmented baseline**
+on macro-F1, and the damage on individual rare classes is large.
+
+| arm | macro-F1 | Shellcode F1 | Worms F1 |
+|---|---|---|---|
+| none | 0.511 | 0.495 | 0.514 |
+| random oversample | **0.526** | 0.422 | **0.720** |
+| SMOTE | **0.487** ↓ | **0.357** ↓ | **0.382** ↓ |
+| ADASYN | **0.487** ↓ | **0.352** ↓ | **0.412** ↓ |
+| flowmatch | 0.511 | 0.507 | 0.556 |
+| flowmatch_pertype | 0.510 | **0.513** | 0.549 |
+
+SMOTE costs 0.139 F1 on Shellcode and 0.132 on Worms relative to doing nothing.
+
+**This directly contradicts the same experiment on NSL-KDD**, where SMOTE improved
+every rare class (U2R 0.219 → 0.428). The *direction* of the SMOTE effect is
+dataset-dependent. Papers reporting a SMOTE gain on one benchmark and
+generalising are not entitled to.
+
+**Two further results in the same table:**
+
+- **Random oversampling — plain duplication — wins Worms outright at 0.720**,
+  well clear of flow matching's 0.556 and nearly double SMOTE's 0.382. Worms has
+  130 training rows. Copying preserves them exactly; every synthesis method
+  distorts them. Below some sample count, repeating data beats inventing it, and
+  locating that threshold predicts when a generative augmenter is the wrong tool.
+- **Flow matching scores exactly 0.000 on Analysis**, on every seed, in both
+  variants — the classifier never emits the class. Analysis has 2,000 training
+  rows, *more* than Shellcode's 1,133. Not sample starvation: Analysis and
+  Backdoor overlap Exploits and Normal in feature space, and smooth synthetic
+  samples spread further into that overlap than SMOTE's interpolations between
+  real points, which cannot leave the manifold.
+
+*Reproduce:* `experiments/05_unsw_comparison.py`
 
 ### 1.1 Synthetic-sample fidelity does not predict downstream utility
 
@@ -143,28 +180,66 @@ Environment: Python 3.11, pinned `requirements.txt`. pandas held at 2.2.3 —
 
 ---
 
-## 3. Measured baseline
+## 3. Measured results
 
-NSL-KDD, official `KDDTrain+` / `KDDTest+` split, XGBoost, mean ± sd over 5 seeds.
+All figures: XGBoost, mean ± sd over 5 seeds, synthetic data added to the
+training split only, test split evaluated once.
+
+### 3.1 NSL-KDD — official `KDDTrain+` / `KDDTest+` split (CPU)
 
 | arm | R2L F1 | U2R F1 | macro-F1 | accuracy |
 |---|---|---|---|---|
 | none | 0.192 ± .025 | 0.219 ± .018 | 0.569 ± .011 | 0.781 |
 | random oversample | 0.192 ± .040 | 0.355 ± .027 | 0.601 ± .015 | 0.785 |
 | SMOTE | 0.246 ± .010 | **0.428 ± .027** | **0.627 ± .008** | 0.788 |
-| ADASYN | **0.251 ± .015** | 0.331 ± .036 | 0.618 ± .009 | 0.798 |
-
-**The bar flow matching must clear: R2L 0.251, U2R 0.428, macro-F1 0.627.**
-
-Observations worth reporting:
+| ADASYN | 0.251 ± .015 | 0.331 ± .036 | 0.618 ± .009 | 0.798 |
+| flowmatch | 0.238 ± .027 | 0.387 ± .021 | 0.629 ± .010 | 0.798 |
+| flowmatch_pertype | **0.263 ± .029** | 0.278 ± .022 | 0.617 ± .010 | **0.802** |
 
 - Accuracy 0.781 against macro-F1 0.569 — the gap the project is about.
 - R2L precision 0.974 with recall 0.107: the classifier is almost never wrong
-  when it flags an R2L attack, it simply declines to flag them.
-- **No single winner.** ADASYN wins R2L, SMOTE wins U2R. Papers testing one
-  resampler and declaring victory are measuring noise.
-- **Random oversampling does nothing for R2L** (−0.0002) while helping U2R
-  (+0.136). The two rare classes respond to different treatments.
+  when it flags R2L, it simply declines to flag it.
+- **Flow matching does not beat SMOTE here.** Per-type takes the best R2L score
+  but by 0.013 against a standard deviation of 0.029 — not a significant win.
+  SMOTE holds U2R decisively (0.428 vs 0.278, roughly six times the pooled sd).
+- **Coverage explains the split between the two flow variants.** Per-type models
+  97% of R2L rows (3 of 8 attack types) and wins that class; it models 58% of
+  U2R (1 of 4 types — only `buffer_overflow` clears the sample threshold) and
+  comes last of the augmented arms.
+
+### 3.2 UNSW-NB15 — official split (GPU)
+
+| arm | Analysis | Backdoor | Shellcode | Worms | macro-F1 |
+|---|---|---|---|---|---|
+| none | 0.045 | 0.068 | 0.495 | 0.514 | 0.511 |
+| random oversample | 0.071 | 0.104 | 0.422 | **0.720** | **0.526** |
+| SMOTE | 0.049 | 0.078 | 0.357 | 0.382 | 0.487 |
+| ADASYN | **0.074** | 0.072 | 0.352 | 0.412 | 0.487 |
+| flowmatch | 0.000 | 0.112 | 0.507 | 0.556 | 0.511 |
+| flowmatch_pertype | 0.000 | **0.112** | **0.513** | 0.549 | 0.510 |
+
+Test support: Analysis 677, Backdoor 583, Shellcode 378, Worms 44.
+
+- **Flow matching beats both classical resamplers on 3 of 4 rare classes** —
+  Shellcode +0.156, Worms +0.174, Backdoor +0.034 over SMOTE — and is the only
+  arm that does not degrade Shellcode.
+- **It still does not win outright.** Four classes, three different winners.
+- `flowmatch_pertype` matches `flowmatch` within noise, exactly as predicted:
+  UNSW-NB15 has no labels below `attack_cat`, so per-type degenerates to
+  per-class. The control behaving as expected supports coverage being the real
+  mechanism behind their divergence on NSL-KDD.
+
+### 3.3 The two datasets disagree
+
+| | NSL-KDD | UNSW-NB15 |
+|---|---|---|
+| SMOTE vs no augmentation | **improves** every rare class | **degrades** macro-F1 and 2 of 4 rare classes |
+| best macro-F1 | SMOTE (0.627) | random oversample (0.526) |
+| flow matching vs SMOTE | loses | wins 3 of 4 rare classes |
+
+Any claim of the form "method X helps with class imbalance in IDS", drawn from a
+single benchmark, is unsupported. This is measurable with the pipeline here and
+is a result in its own right.
 
 ---
 
