@@ -127,8 +127,24 @@ def main() -> None:
     per_class_rows, summary_rows = [], []
     clear_generator_cache()
 
+    # Resume from whatever previous runs completed. Each (arm, seed) here costs minutes
+    # to hours, so a restart -- to fix a bug, free memory, or change arm order -- must
+    # not discard finished work.
+    done: set[tuple[str, int]] = set()
+    pc_path = RESULTS_DIR / "cicids_resampling_per_class.csv"
+    sm_path = RESULTS_DIR / "cicids_resampling_summary.csv"
+    if pc_path.exists() and sm_path.exists():
+        prev_pc = pd.read_csv(pc_path)
+        prev_sm = pd.read_csv(sm_path)
+        per_class_rows = prev_pc.to_dict("records")
+        summary_rows = prev_sm.to_dict("records")
+        done = set(zip(prev_sm["arm"], prev_sm["seed"]))
+        print(f"Resuming: {len(done)} (arm, seed) runs already complete\n")
+
     for arm in ARM_ORDER:
         for seed in SEEDS:
+            if (arm, seed) in done:
+                continue
             t0 = time.time()
             table, summary, n_train = run_one(train, test, features, arm, seed)
             for cls in CLASS_ORDER:

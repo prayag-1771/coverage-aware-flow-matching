@@ -54,6 +54,23 @@ def per_class_table(
     return table
 
 
+def is_degenerate(y_pred: np.ndarray, n_classes: int, min_classes: int = 2) -> bool:
+    """True when a fit collapsed to predicting (almost) a single class.
+
+    Observed on CICIDS2017: the unaugmented arm at seed 4 predicts only BENIGN for the
+    entire test set, giving macro-F1 0.0996 -- roughly 0.9 on the majority class and 0
+    on the other eight. It reproduces exactly across independent runs, so it is a
+    property of that fit rather than noise, and it fails silently: no exception, no
+    warning, and the GPU neither idle nor out of memory.
+
+    Such a run is not a sample from the method's performance distribution, it is a
+    failure to train. Averaging it into an arm drags that arm's mean macro-F1 from
+    ~0.94 to ~0.77; dropping it without saying so is worse. Detect it, count it, report
+    the rate, and re-run the affected seeds.
+    """
+    return len(np.unique(y_pred)) < min_classes and n_classes > min_classes
+
+
 def summary_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
     """Headline scalars. `accuracy` is included to be contrasted with `macro_f1`."""
     return {

@@ -284,21 +284,40 @@ class TabularFlowMatcher:
     # ---- sampling -----------------------------------------------------------
 
     @torch.no_grad()
-    def sample(self, n_samples: int) -> pd.DataFrame:
+    def sample(self, n_samples: int, chunk: int = 32_768) -> pd.DataFrame:
+        """Draw `n_samples` synthetic rows.
+
+        Sampling is chunked. Integrating all rows at once allocates
+        `n_samples x hidden` activations per layer, which on CICIDS2017 means ~176k rows
+        through a 512-wide network in a single tensor. That saturated a 4 GB card to 94%
+        and made runtimes wildly erratic -- 5.8 hours, 16 minutes and 71 minutes for the
+        same cached-generator work across three seeds. Chunking bounds peak memory
+        regardless of how many rows are requested.
+        """
         if self._model is None:
             raise RuntimeError("fit must be called before sample.")
         dev = _device()
-        x = torch.randn(n_samples, self._dim, device=dev)
         dt = 1.0 / self.steps
+        rng = np.random.default_rng(self.seed)
+        frames: list[pd.DataFrame] = []
 
-        # Forward Euler along the learned field. The linear path makes the true velocity
-        # constant in t, so a low step count is adequate here -- this is the practical
-        # advantage over diffusion sampling.
-        for i in range(self.steps):
-            t = torch.full((n_samples,), i * dt, device=dev)
-            x = x + dt * self._model(x, t)
+        for start in range(0, n_samples, chunk):
+            n = min(chunk, n_samples - start)
+            x = torch.randn(n, self._dim, device=dev)
 
-        return self._decode(x.cpu().numpy())
+            # Forward Euler along the learned field. The linear path makes the true
+            # velocity constant in t, so a low step count suffices -- the practical
+            # advantage over diffusion sampling.
+            for i in range(self.steps):
+                t = torch.full((n,), i * dt, device=dev)
+                x = x + dt * self._model(x, t)
+
+            frames.append(self._decode(x.cpu().numpy(), rng))
+            del x
+            if dev.type == "cuda":
+                torch.cuda.empty_cache()
+
+        return pd.concat(frames, ignore_index=True)
 
 
 def nearest_neighbour_distance(
