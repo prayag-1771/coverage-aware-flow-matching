@@ -399,6 +399,41 @@ F1 decide silently.
 **Across both datasets diffusion beats flow matching on three rare classes and
 loses on two.** The project's stated contribution is not supported.
 
+#### CTGAN — the GAN family
+
+Added 2026-07-28, completing the comparison across GAN / diffusion / flow rather
+than two closely related continuous-time methods.
+
+**Not architecture-matched, deliberately.** Diffusion subclasses the flow matcher
+so the only difference is the generative mechanism. CTGAN is the published
+implementation (Xu et al., NeurIPS 2019) with its own preprocessing, conditional
+sampler and PacGAN discriminator — it is the baseline reviewers expect cited, and
+a hand-rolled GAN would invite the objection that we did not use the real thing.
+The confound is that a CTGAN-vs-flow difference could come from preprocessing
+rather than the GAN objective, and any claim drawn from it must say so.
+
+**NSL-KDD, 5 seeds — CTGAN is the weakest generative arm and harms U2R:**
+
+| arm | R2L F1 | U2R F1 |
+|---|---|---|
+| diffusion | **0.2893** | 0.4070 |
+| flowmatch_pertype | 0.2634 | 0.2784 |
+| ADASYN | 0.2505 | 0.3314 |
+| SMOTE | 0.2462 | **0.4279** |
+| flowmatch | 0.2382 | 0.3869 |
+| **CTGAN** | 0.2107 | **0.1821** ↓ |
+| none | 0.1923 | 0.2193 |
+
+CTGAN's U2R falls **below the unaugmented baseline** (0.182 vs 0.219).
+
+**Speed.** CTGAN's default batch of 500 left the GPU at 23% and the CPU at 0.9
+cores. Raising it to 4,000 gave 3.1× (219s → 71s per 10 epochs on probe). Larger
+batches are faster still — full-batch ran in 62s — but only because they perform
+one gradient update per epoch, which is not speed but absence of training. 4,000
+was chosen as the largest batch that keeps a sane update count: **weakening a
+baseline to save compute would reproduce exactly the flaw this project
+criticises.**
+
 #### The two generator families fail on opposite kinds of class
 
 **Shellcode — the cleanest family separation in this work:**
