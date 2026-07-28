@@ -72,6 +72,7 @@ ARM_ORDER = [
     "diffusion",
     "flowmatch",
     "flowmatch_pertype",
+    "ctgan",
     "adasyn",
 ]
 

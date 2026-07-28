@@ -444,15 +444,36 @@ criticises.**
 Every generative method beats doing nothing; every interpolation method loses to
 it, by up to 0.14. Well supported — 1,133 training rows, 378 test rows.
 
-**Analysis — the mirror image:** all three generative methods collapse to ~0
-while the classical ones reach 0.045–0.074.
+**Analysis — the mirror image, but the split is not generative-vs-interpolation:**
 
-Analysis overlaps Exploits and Normal in feature space. Learned generators spread
-synthetic mass into that overlap; interpolation between two real points cannot
-leave the manifold and therefore cannot make the overlap worse. **Generative
-methods win where a class is separable but under-sampled, and lose where it
-overlaps another class.** That is a mechanism, not a coincidence, and it predicts
-which family to use from a property measurable before training.
+| arm | Analysis F1 | Shellcode F1 |
+|---|---|---|
+| ADASYN | **0.0744** | 0.3520 |
+| random oversample | 0.0707 | 0.4216 |
+| **CTGAN** | **0.0513** | **0.5402** |
+| SMOTE | 0.0488 | 0.3568 |
+| none | 0.0453 | 0.4954 |
+| diffusion | 0.0090 | 0.5172 |
+| flowmatch | **0.0000** | 0.5068 |
+| flowmatch_pertype | **0.0000** | 0.5127 |
+
+**This corrects an earlier claim in this file.** It previously read "all three
+generative methods collapse to ~0 on Analysis", attributing the failure to
+learned generators spreading mass into class overlap. **CTGAN does not collapse**
+— it reaches 0.0513, in line with the classical methods and above the
+unaugmented baseline, while also taking Shellcode outright at 0.5402.
+
+The failure is therefore specific to the **continuous-time** generators.
+Diffusion and flow matching both transport a Gaussian to the data distribution
+through a smooth field, and both collapse on the overlapping class. CTGAN's
+mode-specific normalisation and conditional sampler evidently preserve the
+minority mode where continuous transport does not.
+
+**Revised mechanism:** *continuous-time generative models fail on classes that
+overlap another class in feature space; adversarial and interpolation methods do
+not.* Sharper than the original claim, and still predictive from a property
+measurable before training — but it now separates the generative family rather
+than lumping it together, which the CTGAN data forced.
 
 ### 3.3b All 90 runs: best arm per rare class
 
