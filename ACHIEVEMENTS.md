@@ -732,6 +732,53 @@ cached-generator work.
 
 ---
 
+## 3c. SHAP: augmentation rewrites the decision rule
+
+NSL-KDD, TreeSHAP on XGBoost, 2,000 test rows. L1 distance between normalised
+mean-|SHAP| profiles against the unaugmented model — 0 means identical reliance,
+2 means no overlap.
+
+| arm | R2L L1 | R2L top-5 overlap | R2L F1 | U2R L1 | U2R F1 |
+|---|---|---|---|---|---|
+| SMOTE | **0.326** | 4/5 | 0.246 | 0.541 | **0.428** |
+| ADASYN | 0.462 | 3/5 | 0.251 | 0.699 | 0.331 |
+| flowmatch_pertype | 0.609 | 3/5 | 0.263 | 0.547 | 0.278 |
+| flowmatch | 0.686 | **2/5** | 0.238 | 0.633 | 0.387 |
+| **diffusion** | **0.827** | 3/5 | **0.289** | **0.783** | 0.407 |
+
+**Augmentation substantially rewrites what the classifier attends to.** L1 reaches
+0.83 of a possible 2.0, and top-5 feature overlap falls to **2 of 5**. Synthetic
+data is not "more of the same": models trained with it use different features.
+
+Concretely, on R2L the unaugmented model leads on `src_bytes` and `count`;
+diffusion promotes `hot` and `protocol_type_tcp`; flow matching promotes
+`dst_host_same_src_port_rate` to first. On U2R, `service_telnet` is a top-5
+feature for none / SMOTE / both flow variants but **not** for diffusion or ADASYN.
+
+**The framing this analysis was built on turned out to be backwards.** It assumed
+faithful synthetic data should *preserve* the decision rule, making divergence a
+warning sign. But the baseline's R2L rule is bad — 0.107 recall — so preserving
+it is not a virtue. On R2L the arm that diverges most (diffusion) also scores
+best, and the arm that stays closest (SMOTE) scores near the bottom.
+
+**Does divergence predict performance? No, not detectably.**
+
+| class | Pearson r | p | Spearman | p |
+|---|---|---|---|---|
+| R2L | +0.622 | 0.263 | +0.400 | 0.505 |
+| U2R | +0.226 | 0.715 | −0.100 | 0.873 |
+
+Five arms gives no power; these are descriptive, not evidence. The suggestive
+positive trend on R2L does not appear on U2R at all.
+
+**This is the fourth independent measure that fails to predict utility**, after
+detection AUC, nearest-neighbour distance, and marginal KS (§1.1, §3b). Sample
+realism, distributional closeness, marginal fidelity, and now decision-rule
+similarity — none of them tells you whether a generator will help.
+
+*Reproduce:* `experiments/10_shap.py`, `results/shap_divergence.csv`,
+`results/shap_profiles.csv`
+
 ## 3d. Ablations: both defaults are wrong
 
 NSL-KDD, 3 seeds. A sensitivity sweep, not a significance test.
