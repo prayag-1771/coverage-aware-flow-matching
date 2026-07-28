@@ -1,8 +1,24 @@
 # Core
 imbalanced-learn==0.14.2
 joblib==1.5.3
-numpy==2.2.6
 pandas==2.2.3
+
+# numpy is pinned below 2 and the pin is load-bearing.
+#
+# pyarrow 15.0.2 is compiled against the numpy 1.x C API and fails at import with
+# "AttributeError: _ARRAY_API not found" under numpy 2.x, which breaks reading the
+# CICIDS2017 parquet. The pyarrow releases built for numpy 2 are blocked by Windows
+# Application Control on this machine (see below), so upgrading pyarrow is not an
+# option and numpy must stay below 2.
+#
+# `pip install shap` silently upgrades numpy to 2.x and breaks pyarrow. shap 0.51.0
+# declares numpy>=2 and pip will warn that this pin violates it, but TreeSHAP was
+# verified working on numpy 1.26.4 - the declared bound is stricter than the actual
+# requirement. Keep the pin and ignore the warning.
+numpy==1.26.4
+pyarrow==15.0.2
+shap==0.51.0
+ctgan==0.12.1
 scikit-learn==1.9.0
 scipy==1.17.1
 tabulate==0.10.0
