@@ -305,6 +305,74 @@ two `flowmatch` seeds while Bot moved 0.002. The swing is Infiltration (11 test
 rows) or Heartbleed (3) flipping between ~1.0 and 0. Per-class figures with
 support reported are the only reliable readout.
 
+### 3.2b Diffusion vs flow matching — the comparison the project is named for
+
+Added 2026-07-28. Until this arm existed there was **no diffusion baseline at
+all**, so the stated contribution — flow matching rather than diffusion — could
+not be evaluated.
+
+`TabularDiffusion` subclasses `TabularFlowMatcher` and overrides only `fit` and
+`sample`. Identical encoder, decoder, discrete-column inference, log1p handling,
+network architecture, width, and categorical decode. **The only difference is the
+generative mechanism.** An off-the-shelf TabDDPM would have confounded the
+comparison with preprocessing and tuning differences.
+
+Sampling uses DDIM striding at 50 steps, matching flow matching exactly, so both
+arms cost the same at generation. Full 1000-step ancestral sampling was not
+tractable at CICIDS2017 scale and was not run — stated rather than implied.
+
+**NSL-KDD** (5 seeds): diffusion wins R2L outright, second on U2R, above both
+flow variants on each.
+
+| arm | R2L F1 | U2R F1 |
+|---|---|---|
+| **diffusion** | **0.2893 ± .017** | 0.4070 ± .035 |
+| flowmatch_pertype | 0.2634 ± .029 | 0.2784 ± .022 |
+| ADASYN | 0.2505 ± .015 | 0.3314 ± .036 |
+| SMOTE | 0.2462 ± .010 | **0.4279 ± .027** |
+| flowmatch | 0.2382 ± .027 | 0.3869 ± .021 |
+| none | 0.1923 ± .025 | 0.2193 ± .018 |
+
+The mechanism is a precision/recall trade. Diffusion's R2L precision is **0.624**
+against everyone else's 0.97–0.98, but recall is **0.190** against their
+0.107–0.152. It flags far more R2L attacks and is wrong more often, and that
+lands ahead on F1. **Whether that is preferable is a deployment question F1
+cannot answer** — a system that raises three false alarms to catch one more
+intrusion may or may not be wanted, and the paper should say so rather than let
+F1 decide silently.
+
+**UNSW-NB15** (5 seeds): mixed rather than dominant.
+
+| class | best arm | diffusion | flowmatch | pertype |
+|---|---|---|---|---|
+| Analysis | ADASYN 0.074 | 0.009 | 0.000 | 0.000 |
+| Backdoor | pertype 0.112 | 0.065 | 0.112 | **0.112** |
+| Shellcode | **diffusion 0.517** | **0.517** | 0.507 | 0.513 |
+| Worms | ROS 0.720 | 0.493 | **0.556** | 0.549 |
+
+**Across both datasets diffusion beats flow matching on three rare classes and
+loses on two.** The project's stated contribution is not supported.
+
+#### The two generator families fail on opposite kinds of class
+
+**Shellcode — the cleanest family separation in this work:**
+
+    diffusion 0.517 > pertype 0.513 > flowmatch 0.507 > none 0.495
+       >> ROS 0.422 > SMOTE 0.357 > ADASYN 0.352
+
+Every generative method beats doing nothing; every interpolation method loses to
+it, by up to 0.14. Well supported — 1,133 training rows, 378 test rows.
+
+**Analysis — the mirror image:** all three generative methods collapse to ~0
+while the classical ones reach 0.045–0.074.
+
+Analysis overlaps Exploits and Normal in feature space. Learned generators spread
+synthetic mass into that overlap; interpolation between two real points cannot
+leave the manifold and therefore cannot make the overlap worse. **Generative
+methods win where a class is separable but under-sampled, and lose where it
+overlaps another class.** That is a mechanism, not a coincidence, and it predicts
+which family to use from a property measurable before training.
+
 ### 3.3b All 90 runs: best arm per rare class
 
 Three datasets, six arms, five seeds, one pipeline. Nine rare classes with usable

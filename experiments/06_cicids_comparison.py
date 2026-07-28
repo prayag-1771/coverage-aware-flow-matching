@@ -69,10 +69,19 @@ ARM_ORDER = [
     "none",
     "random_oversample",
     "smote",
+    "diffusion",
     "flowmatch",
     "flowmatch_pertype",
     "adasyn",
 ]
+
+# Kept in sync with src.augment.resampling.ARMS by assertion rather than by hand:
+# this list exists only to move ADASYN last, and silently omitting a newly added arm
+# means it never runs and its absence looks like a completed result.
+assert set(ARM_ORDER) == set(ARMS), (
+    f"ARM_ORDER out of sync with ARMS: missing {set(ARMS) - set(ARM_ORDER)}, "
+    f"extra {set(ARM_ORDER) - set(ARMS)}"
+)
 
 # Minority classes are lifted to this many rows rather than to BENIGN's 1,589,924.
 # Chosen as roughly the largest attack class (DoS, 176,198) so the attack classes end up
