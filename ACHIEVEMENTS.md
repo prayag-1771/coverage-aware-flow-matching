@@ -59,7 +59,36 @@ generalising are not entitled to.
 
 *Reproduce:* `experiments/05_unsw_comparison.py`
 
-### 1.0a Ten of 51 augmentations are statistically significant *harms* ⭐
+### 1.0a Fourteen of 63 augmentations are statistically significant *harms* ⭐
+
+**Updated 2026-07-28 with all eight arms (CTGAN and diffusion added).** 63
+comparisons across three datasets and nine rare classes; **14 are harms** and
+**27 are indistinguishable from no effect**. Fewer than half do anything
+demonstrably useful.
+
+Harms now include every family: SMOTE, ADASYN, random oversampling, CTGAN,
+diffusion, and both flow-matching variants. **No method is exempt.**
+
+| dataset | class | arm | effect | d | Holm-p |
+|---|---|---|---|---|---|
+| UNSW | Shellcode | ADASYN | −0.1434 | −6.64 | 0.0007 |
+| UNSW | Shellcode | **SMOTE** | **−0.1385** | **−9.59** | **0.0002** |
+| UNSW | Worms | SMOTE | −0.1320 | −2.64 | 0.0246 |
+| UNSW | Worms | ADASYN | −0.1020 | −1.70 | 0.0946 |
+| UNSW | Shellcode | random oversample | −0.0738 | −2.89 | 0.0148 |
+| CICIDS | WebAttack | CTGAN | −0.0586 | −0.66 | 1.0000 |
+| CICIDS | WebAttack | diffusion | −0.0496 | −1.10 | 0.5762 |
+| UNSW | Analysis | flowmatch | −0.0453 | −2.08 | 0.0679 |
+| UNSW | Analysis | flowmatch_pertype | −0.0453 | −2.08 | 0.0679 |
+| CICIDS | Bot | ADASYN | −0.0415 | −6.35 | 0.0067 |
+| CICIDS | Bot | SMOTE | −0.0388 | −6.54 | 0.0067 |
+| NSL-KDD | U2R | CTGAN | −0.0371 | −1.05 | 0.0778 |
+| UNSW | Analysis | diffusion | −0.0363 | −1.73 | 0.0909 |
+| UNSW | Backdoor | CTGAN | −0.0114 | −0.90 | 0.4548 |
+
+*(Original 10-of-51 table retained below for the record.)*
+
+### 1.0a-prev Ten of 51 augmentations are statistically significant *harms*
 
 Paired tests against no augmentation, Holm-corrected within each (dataset, class)
 family, degenerate fits excluded, bootstrap 95% CIs.
