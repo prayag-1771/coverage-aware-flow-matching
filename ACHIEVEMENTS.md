@@ -732,6 +732,47 @@ cached-generator work.
 
 ---
 
+## 3d. Ablations: both defaults are wrong
+
+NSL-KDD, 3 seeds. A sensitivity sweep, not a significance test.
+
+### Synthetic ratio — full rebalancing buys nothing
+
+| ratio | train rows | flowmatch R2L | diffusion R2L | SMOTE R2L |
+|---|---|---|---|---|
+| 0.25 | 163,775 | 0.3046 | 0.2476 | 0.2624 |
+| 0.50 | 214,283 | 0.3070 | 0.2750 | 0.2383 |
+| 1.00 | 336,715 | 0.3032 | 0.2660 | 0.2586 |
+
+Flow matching is flat to within 0.004 across a **fourfold** change in synthetic
+volume. Quarter-rebalancing matches full rebalancing on half the training rows.
+
+**Full parity to the majority class is the near-universal default in this
+literature.** It doubles the training set, makes NSL-KDD's U2R 99.92% synthetic,
+and on this evidence produces no benefit.
+
+### Integration steps — fewer is better, not merely sufficient
+
+| steps | R2L F1 | U2R F1 | seconds |
+|---|---|---|---|
+| **10** | **0.3179** | **0.4517** | 90 |
+| 50 | 0.3018 | 0.4385 | 87 |
+| 100 | 0.3028 | 0.4479 | 131 |
+
+Ten steps is best on both rare classes; 100 steps costs 45% more time for
+nothing. At three seeds a 0.016 difference is not significant, so the defensible
+claim is that **performance is flat or slightly better at 10 steps and more
+integration does not help.**
+
+This strengthens flow matching's practical case. Its advantage over diffusion is
+sampling cost, and 10 steps is **100× fewer network evaluations than standard
+1000-step DDPM** rather than the 20× implied by our default of 50.
+
+*Both defaults were chosen because they are common, not because they were tested.
+Both turn out to be wrong in the same direction — more is not better.*
+
+---
+
 ## 4. Methodological corrections made to our own work
 
 Recorded because each was caught by measurement rather than assumed.
