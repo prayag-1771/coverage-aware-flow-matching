@@ -46,9 +46,25 @@ from src.models.classifier import active_device
 from src.models.mlp import TorchMLP, choose_batch_size
 
 RESULTS_DIR = Path(__file__).resolve().parents[1] / "results"
-OUT_PER_CLASS = RESULTS_DIR / "mlp_per_class.csv"
-OUT_SUMMARY = RESULTS_DIR / "mlp_summary.csv"
 SEEDS = [0, 1, 2, 3, 4]
+
+# `--arms` / `--datasets` / `--suffix` exist so one expensive arm can be split into its
+# own process. ADASYN is entirely CPU-bound -- a sklearn neighbour search that no GPU
+# touches -- while the generative arms are GPU-bound, so running ADASYN alongside them
+# costs almost no contention and removes it from the critical path. Each process writes
+# its own files; experiment 14 concatenates whatever is present.
+_args = sys.argv[1:]
+
+
+def _opt(flag: str, default: str) -> str:
+    return _args[_args.index(flag) + 1] if flag in _args else default
+
+
+SUFFIX = _opt("--suffix", "")
+OUT_PER_CLASS = RESULTS_DIR / f"mlp{SUFFIX}_per_class.csv"
+OUT_SUMMARY = RESULTS_DIR / f"mlp{SUFFIX}_summary.csv"
+ONLY_ARMS = [a for a in _opt("--arms", "").split(",") if a]
+ONLY_DATASETS = [d for d in _opt("--datasets", "").split(",") if d]
 
 # Same ordering rationale as experiment 06: ADASYN fits a nearest-neighbour index over
 # the whole training split and costs ~40 minutes per seed on CICIDS2017, so it runs last
@@ -170,8 +186,16 @@ def run_one(cfg: dict, arm: str, seed: int) -> tuple[pd.DataFrame, dict, int, in
 def main() -> None:
     warnings.filterwarnings("ignore")
     device = active_device()
+    arm_order = [a for a in ARM_ORDER if not ONLY_ARMS or a in ONLY_ARMS]
+    datasets = [(n, l) for n, l in DATASETS if not ONLY_DATASETS or n in ONLY_DATASETS]
+    if ONLY_ARMS:
+        unknown = set(ONLY_ARMS) - set(ARM_ORDER)
+        if unknown:
+            raise SystemExit(f"unknown arm(s): {sorted(unknown)}")
     print(f"\nMLP re-run of the full comparison   device={device}   seeds={SEEDS}")
-    print(f"Arms: {ARM_ORDER}\n")
+    print(f"Arms: {arm_order}")
+    print(f"Datasets: {[n for n, _ in datasets]}")
+    print(f"Writing to: {OUT_SUMMARY.name}\n")
     if device != "cuda":
         print("WARNING: no GPU visible. CICIDS2017 on CPU will take days, not hours.\n")
 
@@ -186,11 +210,16 @@ def main() -> None:
         done = set(zip(prev_sm["dataset"], prev_sm["arm"], prev_sm["seed"]))
         print(f"Resuming: {len(done)} (dataset, arm, seed) runs already complete\n")
 
-    for name, loader in DATASETS:
+    for name, loader in datasets:
         # Skip the load entirely when this dataset is already finished -- CICIDS2017
         # alone costs a couple of minutes and 2 GB just to read.
-        finished = sum(1 for d, _, _ in done if d == name)
-        if finished >= len(ARM_ORDER) * len(SEEDS):
+        #
+        # Counted against `arm_order`, not against everything in the file. With
+        # `--arms` narrowing the run to three arms, a dataset with twenty unrelated
+        # runs already recorded satisfied `>= 3 * 5` and was skipped outright: the
+        # process printed a summary and exited in four seconds looking like a success.
+        finished = sum(1 for d, a, _ in done if d == name and a in arm_order)
+        if finished >= len(arm_order) * len(SEEDS):
             print(f"{name}: already complete, skipping load.\n")
             continue
 
@@ -205,7 +234,7 @@ def main() -> None:
               f"{choose_batch_size(len(cfg['train']), device):,} rows/step")
         print("=" * 92)
 
-        for arm in ARM_ORDER:
+        for arm in arm_order:
             for seed in SEEDS:
                 if (cfg["name"], arm, seed) in done:
                     continue
@@ -258,7 +287,7 @@ def main() -> None:
     print("MLP MACRO-F1 BY ARM (mean over seeds)")
     print("=" * 92)
     print(summaries.pivot_table(index="arm", columns="dataset", values="macro_f1",
-                                aggfunc="mean").reindex(ARM_ORDER).round(4).to_string())
+                                aggfunc="mean").reindex(arm_order).round(4).to_string())
 
     print("\n" + "=" * 92)
     print("MLP RARE-CLASS F1 (mean over seeds)")
@@ -272,7 +301,7 @@ def main() -> None:
             continue
         print(f"\n{ds}")
         print(sub.pivot_table(index="arm", columns="class", values="f1",
-                              aggfunc="mean").reindex(ARM_ORDER).round(4).to_string())
+                              aggfunc="mean").reindex(arm_order).round(4).to_string())
 
     print(f"\nSaved -> {OUT_PER_CLASS.name}, {OUT_SUMMARY.name}")
     print("Cross-classifier agreement is computed in experiment 14.")

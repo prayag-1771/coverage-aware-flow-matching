@@ -936,6 +936,104 @@ points.* — `experiments/13_class_overlap.py`, `results/class_overlap.csv`
 
 ---
 
+## 3f. The conclusions are classifier-dependent ⭐
+
+*NSL-KDD and UNSW-NB15 complete; CICIDS2017 running at time of writing.*
+
+Every number in this document up to §3e came from XGBoost. That leaves one
+sentence able to dismiss the lot: gradient-boosted trees are piecewise-constant
+and scale-invariant, so a synthetic row landing inside an existing leaf changes
+nothing for them. "SMOTE and flow matching are indistinguishable" might be a fact
+about trees rather than about synthetic data.
+
+An MLP was built as the contrast — same splits, same seeds, same augmentation,
+same preprocessing, same untuned-and-unweighted treatment, **only the model family
+changed**. The answer is not the reassuring one.
+
+**Across the six rare classes measured so far, the two classifiers never once
+agree on the best arm.**
+
+| dataset | class | rank rho | XGBoost's best | MLP's best |
+|---|---|---|---|---|
+| NSL-KDD | r2l | −0.119 | diffusion | ctgan |
+| NSL-KDD | u2r | −0.452 | smote | ctgan |
+| UNSW-NB15 | Analysis | +0.686 | adasyn | random_oversample |
+| UNSW-NB15 | Backdoor | +0.429 | flowmatch_pertype | random_oversample |
+| UNSW-NB15 | Shellcode | +0.611 | ctgan | **none** |
+| UNSW-NB15 | Worms | +0.240 | random_oversample | **none** |
+
+Mean Spearman rho +0.232; **0 of 6 classes share a best arm**. On two UNSW classes
+the MLP's best option is no augmentation at all.
+
+**Sign agreement is 18 of 42 (43%)** — whether an arm helps or harms is close to a
+coin flip between classifiers.
+
+**The disagreement is directional, not noise.** Every generative arm that helps
+XGBoost harms the MLP:
+
+| UNSW-NB15 | ctgan | diffusion | flowmatch | pertype |
+|---|---|---|---|---|
+| Shellcode, XGBoost | +0.044 | +0.022 | +0.003 | +0.016 |
+| Shellcode, MLP | −0.007 | −0.119 | −0.082 | −0.082 |
+| Worms, XGBoost | +0.060 | −0.007 | +0.060 | +0.026 |
+| Worms, MLP | −0.076 | −0.073 | −0.095 | −0.084 |
+
+Seven of eight cells flip sign, all in the same direction. This is consistent with
+the mechanism the experiment was designed around: synthetic rows that fall inside
+an existing leaf merely reweight it for a tree, while for a network they move a
+decision boundary it then has to fit.
+
+**What survives both classifiers is mostly the harms.** Of 30 effects with a
+bootstrap CI excluding zero under XGBoost and 33 under the MLP, **12 are found
+under both** — and 6 of those 12 are harms from interpolation methods (ADASYN,
+SMOTE and random oversampling damaging Shellcode and Worms; CTGAN damaging
+Backdoor). §1.0a's central negative result is the part that is robust to the
+classifier; the positive results largely are not.
+
+### Ruled out: this is not the scaler
+
+The obvious objection had to be eliminated first. The pipeline fits
+`StandardScaler` on the **augmented** training set, as the usual recipe does. If a
+generator emits outliers the fitted mean and variance shift, and every *real* row
+is re-encoded through a distorted transform — which a tree would not notice and a
+network would. That would make the whole finding a pipeline artefact.
+
+**The distortion is real and large:**
+
+| arm | max mean shift (real sd) | max sd ratio | worst column |
+|---|---|---|---|
+| smote | 0.386 | 2.55 | `sttl` |
+| flowmatch | 1.220 | 4.90 | `ct_flw_http_mthd` |
+| diffusion | **1.901** | **5.77** | `ct_flw_http_mthd` |
+
+Diffusion moves one column's fitted mean by nearly two standard deviations of the
+real data and inflates its scale almost sixfold. **And it is not the cause.**
+Re-fitting the scaler on real rows only (regime B), everything else identical:
+
+| macro-F1 delta vs none | regime A (augmented) | regime B (real only) |
+|---|---|---|
+| smote | −0.0123 | −0.0115 |
+| diffusion | −0.0311 | −0.0268 |
+| flowmatch | −0.0238 | −0.0213 |
+
+Correcting the scaler recovers at most 0.004 of a 0.031 loss — about 13%, and on
+Worms flow matching gets *worse* under B (−0.072 → −0.111). **The harm is the
+synthetic rows themselves entering the loss, not the encoding of the real ones.**
+
+*Recorded as a distinct result regardless: generative augmentation measurably
+corrupts a fitted standard scaler, by up to 5.8× on a real column. It happens to
+not be what is driving the F1 loss here, but anyone pairing these generators with
+a scale-sensitive model is carrying it unknowingly.*
+
+**Why this matters more than the result it complicates.** Every paper in this area
+fixes one classifier and reports the arm ranking as though it were a property of
+the augmentation method. On this evidence it is not. A recommendation of the form
+"use method X for rare-class IDS" is incomplete without naming the classifier, and
+the field states it unconditionally. — `experiments/12,14,15`,
+`results/mlp_*.csv`, `results/scaler_confound.csv`
+
+---
+
 ## 4. Methodological corrections made to our own work
 
 Recorded because each was caught by measurement rather than assumed.
@@ -1083,18 +1181,30 @@ download failed twice under pip (no resume); `curl -C -` at ~2 MB/s worked.
 
 ## 6. Honest status
 
-**Working:** the pipeline, the measurement infrastructure, and all four
-classical baselines.
+*Rewritten 2026-07-28. The previous version of this section described the six-arm
+comparison as "running" and listed CTGAN, ablations, significance testing and
+SHAP as not started; all had been finished for some time. Left stale sections are
+worse than absent ones, so this and §7 are now dated.*
 
-**Not yet working:** flow matching produces samples a discriminator identifies
-~98 % of the time — materially worse than SMOTE's 0.535. Per-attack-type
-generation improved this substantially (R2L NN ratio 21.40 → 7.14, KS median
-0.113 → 0.061) which confirmed the mixture-fitting diagnosis, but did not close
-the gap.
+**Working:** the pipeline, the measurement infrastructure, all four classical
+baselines, all four generative arms, and the full comparison at 8 arms × 5 seeds
+× 3 datasets under XGBoost.
 
-**Unknown:** whether flow matching improves rare-class F1. Given §1.1, poor
-fidelity does not rule it out — ADASYN scores worst on fidelity and best on R2L.
-The six-arm comparison is running and will answer this.
+**Settled:** flow matching produces samples a discriminator identifies ~98 % of
+the time, materially worse than SMOTE's 0.535 — and it does not matter. Fidelity
+does not predict utility (§1.1), the quality gate does not predict utility
+(§1.1), SHAP divergence does not predict utility (§3c), and class geometry does
+not predict utility (§3e). Four independent cheap predictors, all plausible, none
+of them informative about whether augmentation will help.
+
+**Settled and negative:** no generative arm beats the best interpolation arm by a
+margin that survives a bootstrap CI on any rare class. 14 of 63 augmentations are
+statistically significant *harms* (§1.0a). This is not the result the project set
+out to produce and it is the result it has.
+
+**Open at time of writing:** whether any of the above is a property of
+augmentation or of XGBoost. The neural sweep answering that is in progress; see
+§3f.
 
 **Coverage limit to state plainly:** per-type generation cannot model attack
 types with too few samples. R2L covers 97 % of rows (3 of 8 types); **U2R covers
@@ -1104,22 +1214,25 @@ only 58 % (1 of 4 types)**.
 
 ## 7. What is not done
 
-Roughly 40% of the experiments and 90% of the writing remain.
+*Dated 2026-07-28.* The experimental content is close to complete; the writing is
+not.
 
-**Experiments**
-- **CTGAN and TabDDPM arms — the largest gap.** The stated novelty is that
-  diffusion has been applied ~10 times and flow matching has not. **Without a
-  diffusion baseline that comparison cannot be made at all**, and a reviewer will
-  ask for it first. 3 datasets × 2 arms × 5 seeds = 30 runs.
-- Ablations: synthetic ratio (25/50/100%), ODE step count. Everything currently
-  runs at full rebalancing and 50 steps with no justification beyond default.
-- Significance testing (Wilcoxon signed-rank). Several reported differences are
-  currently inside the noise and a reviewer can dismiss them.
-- SHAP — not started.
-- Re-run CICIDS2017 `flowmatch` seeds 0–2, which were measured under GPU memory
-  saturation while seeds 3–4 were not. Mixing regimes within one arm is not
-  defensible even though it does not change the conclusion.
-- Diagnose the ~1-in-5 degenerate fits rather than only detecting them.
+**Experiments — remaining**
+- Second-classifier sweep (experiment 12) still running on CICIDS2017 at the time
+  this line was written. NSL-KDD complete, UNSW-NB15 in progress.
+- More than 5 seeds. The Wilcoxon signed-rank floor at n=5 is 0.0625, so no rank
+  test in this project can reach p<0.05 whatever the effect size (§1.0a). 20 seeds
+  would remove that ceiling. Optional: the bootstrap CI already carries the
+  argument.
+- Cross-dataset transfer — train the generator on one dataset, test on another.
+  Deferred deliberately (`PLAN.md` §9); it is a different paper.
+
+**Experiments — done since this section was last accurate**
+CTGAN on all three datasets; diffusion as an architecture-matched arm; the ratio
+and integration-step ablations (§3d); paired significance testing with
+Holm-Bonferroni and bootstrap CIs (§1.0a); SHAP attribution divergence (§3c); the
+CICIDS2017 `flowmatch` re-run under un-saturated GPU memory; root-cause diagnosis
+of the ~1-in-5 collapses (§3b-ii); class-overlap complexity measures (§3e).
 
 **Paper**
 - Only the Introduction exists. Related Work, Method, Experiments, Results,
@@ -1127,9 +1240,12 @@ Roughly 40% of the experiments and 90% of the writing remain.
 - Bibliography verification — entries assembled from landing pages, not publisher
   exports; several fields marked `% CHECK`.
 - Re-run the novelty search before submission. The field is moving: a directly
-  relevant paper appeared 9 days before this project started.
+  relevant paper appeared 9 days before this project started. A search on
+  2026-07-27 found that fidelity≠utility is **already published** in the general
+  tabular literature (arXiv 2503.05954), so that claim cannot carry the paper on
+  its own; the IDS-specific version and the undetectable-bad-batch result (§3b-ii)
+  are what remain distinctive.
 - Repo cleanup and reproduction instructions.
-- Cross-dataset transfer (deferred; see `PLAN.md` §9).
 
 **Decision, not work:** the results no longer support a method paper. Flow
 matching loses on NSL-KDD, wins 3 of 4 rare classes on UNSW, and ties the
