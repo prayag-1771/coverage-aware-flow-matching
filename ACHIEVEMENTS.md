@@ -938,7 +938,7 @@ points.* — `experiments/13_class_overlap.py`, `results/class_overlap.csv`
 
 ## 3f. The conclusions are classifier-dependent ⭐
 
-*NSL-KDD and UNSW-NB15 complete; CICIDS2017 running at time of writing.*
+*Complete: 120 runs, 8 arms × 5 seeds × 3 datasets.*
 
 Every number in this document up to §3e came from XGBoost. That leaves one
 sentence able to dismiss the lot: gradient-boosted trees are piecewise-constant
@@ -950,8 +950,8 @@ An MLP was built as the contrast — same splits, same seeds, same augmentation,
 same preprocessing, same untuned-and-unweighted treatment, **only the model family
 changed**. The answer is not the reassuring one.
 
-**Across the six rare classes measured so far, the two classifiers never once
-agree on the best arm.**
+**Across all nine rare classes, the two classifiers never once agree on the best
+arm.**
 
 | dataset | class | rank rho | XGBoost's best | MLP's best |
 |---|---|---|---|---|
@@ -961,12 +961,28 @@ agree on the best arm.**
 | UNSW-NB15 | Backdoor | +0.429 | flowmatch_pertype | random_oversample |
 | UNSW-NB15 | Shellcode | +0.611 | ctgan | **none** |
 | UNSW-NB15 | Worms | +0.240 | random_oversample | **none** |
+| CICIDS2017 | Bot | +0.381 | diffusion | ctgan |
+| CICIDS2017 | WebAttack | +0.467 | random_oversample | smote |
+| CICIDS2017 | BruteForce | −0.334 | random_oversample | flowmatch_pertype |
 
-Mean Spearman rho +0.232; **0 of 6 classes share a best arm**. On two UNSW classes
-the MLP's best option is no augmentation at all.
+Mean Spearman rho +0.212, **not significant for any class**; **0 of 9 share a best
+arm**. On two UNSW classes the MLP's best option is no augmentation at all.
 
-**Sign agreement is 18 of 42 (43%)** — whether an arm helps or harms is close to a
-coin flip between classifiers.
+**Sign agreement is 27 of 63 (43%)** — whether an arm helps or harms is worse than
+a coin flip between classifiers.
+
+**This is not a weak model disagreeing with a strong one.** The MLP *beats*
+XGBoost on NSL-KDD and loses on the other two:
+
+| best macro-F1 over all arms | XGBoost | MLP |
+|---|---|---|
+| NSL-KDD | 0.6373 | **0.6832** |
+| UNSW-NB15 | **0.5261** | 0.4335 |
+| CICIDS2017 | **0.9731** | 0.7909 |
+
+It also **never collapsed**: 0 degenerate fits in 120 runs, against the ~1-in-5
+rate XGBoost shows on CICIDS2017 generative arms (§3.3c). Whatever is driving the
+disagreement, "the network could not train" is not it.
 
 **The disagreement is directional, not noise.** Every generative arm that helps
 XGBoost harms the MLP:
@@ -983,12 +999,41 @@ the mechanism the experiment was designed around: synthetic rows that fall insid
 an existing leaf merely reweight it for a tree, while for a network they move a
 decision boundary it then has to fit.
 
-**What survives both classifiers is mostly the harms.** Of 30 effects with a
-bootstrap CI excluding zero under XGBoost and 33 under the MLP, **12 are found
-under both** — and 6 of those 12 are harms from interpolation methods (ADASYN,
-SMOTE and random oversampling damaging Shellcode and Worms; CTGAN damaging
-Backdoor). §1.0a's central negative result is the part that is robust to the
-classifier; the positive results largely are not.
+**CICIDS2017 adds a second pattern the tree hides entirely.** Under the MLP, the
+interpolation methods do violent and *opposite* things to two classes at once:
+
+| CICIDS2017, MLP (median over seeds) | Bot | WebAttack | BruteForce | macro-F1 |
+|---|---|---|---|---|
+| none | 0.559 | 0.142 | 0.982 | 0.646 |
+| smote | **0.235** | **0.373** | 0.964 | 0.762 |
+| random_oversample | **0.212** | **0.352** | 0.975 | 0.718 |
+| adasyn | **0.208** | **0.296** | **0.783** | 0.714 |
+| flowmatch | 0.548 | 0.196 | 0.984 | 0.769 |
+| diffusion | 0.549 | 0.193 | 0.985 | 0.776 |
+
+SMOTE cuts Bot by more than half and simultaneously more than doubles WebAttack.
+ADASYN does the same and additionally destroys BruteForce, a class every other arm
+leaves at 0.98. The generative arms move neither. **Macro-F1 conceals all of it** —
+every augmented arm looks like a clean improvement over the 0.646 baseline, which
+is exactly the summary statistic this literature reports.
+
+Under XGBoost these same CICIDS effects are near-invisible: ADASYN moves BruteForce
+by +0.0001 and WebAttack by −0.0014. The tree is simply not sensitive to what the
+interpolation is doing to the geometry.
+
+**What survives both classifiers is almost entirely the classical methods.** Of 36
+effects with a bootstrap CI excluding zero under XGBoost and 47 under the MLP,
+**16 are found under both — and 14 of those 16 involve SMOTE, ADASYN or random
+oversampling.**
+
+Only two robust effects involve a generative method at all: `flowmatch_pertype`
+helping NSL-KDD R2L, and CTGAN *harming* UNSW Backdoor. Split by direction, the 16
+are 8 helps and 8 harms.
+
+**Stated plainly: after 240 runs across two classifiers, generative augmentation
+produces one reproducible improvement.** Interpolation methods produce fourteen
+reproducible effects, half of which are damage. §1.0a's central negative result is
+the part robust to the classifier; the positive results are not.
 
 ### Ruled out: this is not the scaler
 
@@ -1029,8 +1074,25 @@ a scale-sensitive model is carrying it unknowingly.*
 fixes one classifier and reports the arm ranking as though it were a property of
 the augmentation method. On this evidence it is not. A recommendation of the form
 "use method X for rare-class IDS" is incomplete without naming the classifier, and
-the field states it unconditionally. — `experiments/12,14,15`,
-`results/mlp_*.csv`, `results/scaler_confound.csv`
+the field states it unconditionally.
+
+### Limits of this result, stated before a reviewer states them
+
+- **Two classifiers is two points.** "Rankings are classifier-dependent" is
+  established; *which* classifier to prefer is not, and cannot be from n=2. A
+  third family (linear, or a tabular transformer) would say whether trees or
+  networks are the outlier.
+- **The MLP is untuned by design.** Fixing one architecture across all arms is
+  what makes the arms comparable, but it means the MLP's absolute numbers are a
+  floor rather than the best a network can do. Its lower macro-F1 on UNSW-NB15 and
+  CICIDS2017 should not be read as a claim about neural networks on tabular data.
+- **Five seeds.** Same Wilcoxon floor as everywhere else in this project (§1.0a);
+  the bootstrap CI carries the argument, not the p-values.
+- **The mechanism is inferred, not proven.** The leaf-versus-boundary explanation
+  fits the direction of every flip and is supported by the scaler test ruling out
+  the alternative, but it has not been demonstrated directly.
+
+— `experiments/12,14,15`, `results/mlp_*.csv`, `results/scaler_confound.csv`
 
 ---
 
@@ -1202,9 +1264,12 @@ margin that survives a bootstrap CI on any rare class. 14 of 63 augmentations ar
 statistically significant *harms* (§1.0a). This is not the result the project set
 out to produce and it is the result it has.
 
-**Open at time of writing:** whether any of the above is a property of
-augmentation or of XGBoost. The neural sweep answering that is in progress; see
-§3f.
+**Settled, and it reframes the paper:** none of the above is a property of
+augmentation alone. Re-run with an MLP, the two classifiers agree on the best arm
+for **0 of 9** rare classes, agree on help-vs-harm 43% of the time, and share only
+16 of 83 statistically solid effects — 14 of those 16 belonging to SMOTE, ADASYN
+or random oversampling. **Across 240 runs and two classifiers, generative
+augmentation produces exactly one reproducible improvement.** See §3f.
 
 **Coverage limit to state plainly:** per-type generation cannot model attack
 types with too few samples. R2L covers 97 % of rows (3 of 8 types); **U2R covers
@@ -1218,8 +1283,8 @@ only 58 % (1 of 4 types)**.
 not.
 
 **Experiments — remaining**
-- Second-classifier sweep (experiment 12) still running on CICIDS2017 at the time
-  this line was written. NSL-KDD complete, UNSW-NB15 in progress.
+- A **third** classifier family. Two points establish that rankings are
+  classifier-dependent but cannot say which classifier is the outlier (§3f).
 - More than 5 seeds. The Wilcoxon signed-rank floor at n=5 is 0.0625, so no rank
   test in this project can reach p<0.05 whatever the effect size (§1.0a). 20 seeds
   would remove that ceiling. Optional: the bootstrap CI already carries the
