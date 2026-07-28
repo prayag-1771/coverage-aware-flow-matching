@@ -59,6 +59,52 @@ generalising are not entitled to.
 
 *Reproduce:* `experiments/05_unsw_comparison.py`
 
+### 1.0a Ten of 51 augmentations are statistically significant *harms* ⭐
+
+Paired tests against no augmentation, Holm-corrected within each (dataset, class)
+family, degenerate fits excluded, bootstrap 95% CIs.
+
+**The largest effect measured anywhere in this project is a harm.**
+
+| dataset | class | arm | effect | Cohen's d | Holm-p |
+|---|---|---|---|---|---|
+| UNSW | Shellcode | **SMOTE** | **−0.1385** | **−9.59** | 0.0002 |
+| UNSW | Shellcode | ADASYN | −0.1434 | −6.64 | 0.0006 |
+| UNSW | Worms | SMOTE | −0.1320 | −2.64 | 0.0205 |
+| UNSW | Worms | ADASYN | −0.1020 | −1.70 | 0.0757 |
+| UNSW | Shellcode | random oversample | −0.0738 | −2.89 | 0.0118 |
+| UNSW | Analysis | flowmatch | −0.0453 | −2.08 | 0.0582 |
+| UNSW | Analysis | flowmatch_pertype | −0.0453 | −2.08 | 0.0582 |
+| CICIDS | Bot | ADASYN | −0.0415 | −6.35 | 0.0048 |
+| CICIDS | Bot | SMOTE | −0.0388 | −6.54 | 0.0048 |
+| UNSW | Analysis | diffusion | −0.0363 | −1.73 | 0.0728 |
+
+SMOTE damaging Shellcode at **d = −9.59** is a larger effect than any benefit
+SMOTE produces on any dataset. These are not failures to help; they are
+measurably worse than doing nothing, with corrected p-values and CIs excluding
+zero.
+
+**20 of 51 comparisons do not survive** — their 95% CI contains zero, so at five
+seeds they are indistinguishable from no effect. Several differences discussed
+earlier as real fall here, including flow matching's R2L gain on NSL-KDD
+(Holm-p 0.0613).
+
+#### A statistical limit that had to be worked around honestly
+
+Wilcoxon signed-rank over n=5 pairs has 2⁵ = 32 sign assignments, so its smallest
+attainable two-sided p-value is **0.0625**. **No comparison in this work can reach
+p < 0.05 by Wilcoxon, regardless of effect size.** Reporting Wilcoxon alone —
+the obvious choice, and what the plan originally specified — would have made
+every result appear non-significant for a reason having nothing to do with the
+data.
+
+Reported instead: paired t-tests (Holm-corrected), Cohen's d, and bootstrap CIs,
+with **"CI excludes zero" as the primary criterion** rather than any p-threshold.
+The limitation is documented in `experiments/08_significance.py` rather than
+worked around silently.
+
+*Reproduce:* `experiments/08_significance.py`, `results/significance.csv`
+
 ### 1.0b Undersampling the majority makes rare-class detection worse
 
 The first step of nearly every imbalance pipeline is to cut the majority class
@@ -519,6 +565,20 @@ For comparison, on the same test:
 | SMOTE | u2r | 0.7934 | **0.524** | 0.058 |
 | ADASYN | r2l | 0.9894 | 9.54 | 0.203 |
 | ADASYN | u2r | 1.0000 | 1.21 | 0.103 |
+| CTGAN | r2l | 1.0000 | 11.32 | **0.413** |
+| diffusion | r2l | 0.9992 | 43.24 | 0.306 |
+
+**The three fidelity metrics disagree about which generator is best.** On r2l,
+CTGAN has the closest samples in Euclidean terms (NN ratio 11.3) but the worst
+marginals (KS 0.413) and is perfectly separable; diffusion has the worst NN ratio
+(43.2) but better marginals than CTGAN; flow matching has the best marginals
+(0.146) and middling distance.
+
+**"Sample quality" is therefore not one property**, and any paper reporting a
+single fidelity number to argue its generator is better has chosen which metric
+to report. Combined with §1.1 — that fidelity does not predict utility at all —
+the case for selecting a generator on sample-quality grounds is weak on two
+independent counts.
 
 **SMOTE's sub-1.0 NN ratio is structural**: its samples are interpolations
 between two real points and therefore cannot leave the data manifold. That is the
