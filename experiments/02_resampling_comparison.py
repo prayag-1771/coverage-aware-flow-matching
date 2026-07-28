@@ -85,6 +85,16 @@ def main() -> None:
     per_class_rows = []
     summary_rows = []
 
+    # Resume completed (arm, seed) pairs so adding an arm does not re-run the others.
+    done: set = set()
+    _pc = RESULTS_DIR / "nsl_kdd_resampling_per_class.csv"
+    _sm = RESULTS_DIR / "nsl_kdd_resampling_summary.csv"
+    if _pc.exists() and _sm.exists():
+        _p, _s = pd.read_csv(_pc), pd.read_csv(_sm)
+        per_class_rows, summary_rows = _p.to_dict("records"), _s.to_dict("records")
+        done = set(zip(_s["arm"], _s["seed"]))
+        print(f"Resuming: {len(done)} (arm, seed) runs already complete")
+
     print(f"\nArms: {ARMS}")
     print(f"Seeds: {SEEDS}   (train n = {len(train):,})")
     print(f"Classifier device: {active_device()}   "
@@ -92,6 +102,8 @@ def main() -> None:
 
     for arm in ARMS:
         for seed in SEEDS:
+            if (arm, seed) in done:
+                continue
             t0 = time.time()
             table, summary, n_train = run_one(train, test, arm, seed)
             elapsed = time.time() - t0
@@ -117,6 +129,12 @@ def main() -> None:
                 f"u2r_F1={table.loc['u2r', 'f1']:.4f}  "
                 f"({elapsed:.0f}s)"
             )
+
+            RESULTS_DIR.mkdir(exist_ok=True)
+            pd.DataFrame(per_class_rows).to_csv(
+                RESULTS_DIR / "nsl_kdd_resampling_per_class.csv", index=False)
+            pd.DataFrame(summary_rows).to_csv(
+                RESULTS_DIR / "nsl_kdd_resampling_summary.csv", index=False)
 
     per_class = pd.DataFrame(per_class_rows)
     summaries = pd.DataFrame(summary_rows)

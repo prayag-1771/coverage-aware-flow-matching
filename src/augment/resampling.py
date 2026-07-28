@@ -18,11 +18,14 @@ import numpy as np
 import pandas as pd
 from imblearn.over_sampling import ADASYN, SMOTE, SMOTENC, RandomOverSampler
 
-ARMS = ["none", "random_oversample", "smote", "adasyn", "flowmatch", "flowmatch_pertype"]
+ARMS = [
+    "none", "random_oversample", "smote", "adasyn",
+    "diffusion", "flowmatch", "flowmatch_pertype",
+]
 
 # Generative arms need the fine-grained attack type, not just the coarse class, so
 # `augment` takes an optional `types` argument. The classical samplers ignore it.
-GENERATIVE_ARMS = {"flowmatch", "flowmatch_pertype"}
+GENERATIVE_ARMS = {"diffusion", "flowmatch", "flowmatch_pertype"}
 
 
 def _target_counts(
@@ -161,6 +164,7 @@ def _generative(
     Unlike the classical samplers, real rows are always retained in full and only the
     shortfall is synthesised, so no real training data is displaced by generated data.
     """
+    from src.augment.diffusion import TabularDiffusion
     from src.augment.flow_matching import TabularFlowMatcher
     from src.augment.per_type import PerTypeFlowMatcher
 
@@ -194,6 +198,10 @@ def _generative(
                     gen = TabularFlowMatcher(
                         categorical_columns, numeric_columns, seed=generator_seed
                     ).fit(subset)
+            elif arm == "diffusion":
+                gen = TabularDiffusion(
+                    categorical_columns, numeric_columns, seed=generator_seed
+                ).fit(subset)
             else:
                 gen = TabularFlowMatcher(
                     categorical_columns, numeric_columns, seed=generator_seed

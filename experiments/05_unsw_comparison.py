@@ -85,10 +85,22 @@ def main() -> None:
     print(f"Classifier device: {active_device()}\n")
 
     per_class_rows, summary_rows = [], []
+
+    # Resume completed (arm, seed) pairs so adding an arm does not re-run the others.
+    done: set = set()
+    _pc = RESULTS_DIR / "unsw_resampling_per_class.csv"
+    _sm = RESULTS_DIR / "unsw_resampling_summary.csv"
+    if _pc.exists() and _sm.exists():
+        _p, _s = pd.read_csv(_pc), pd.read_csv(_sm)
+        per_class_rows, summary_rows = _p.to_dict("records"), _s.to_dict("records")
+        done = set(zip(_s["arm"], _s["seed"]))
+        print(f"Resuming: {len(done)} (arm, seed) runs already complete\n")
     clear_generator_cache()
 
     for arm in ARMS:
         for seed in SEEDS:
+            if (arm, seed) in done:
+                continue
             t0 = time.time()
             table, summary, n_train = run_one(
                 train, test, features, numeric_columns, arm, seed
@@ -105,6 +117,12 @@ def main() -> None:
             print(f"  {arm:<18} s{seed}  n={n_train:>7,}  "
                   f"macroF1={summary['macro_f1']:.4f}  {rare}  "
                   f"({time.time()-t0:.0f}s)")
+
+            RESULTS_DIR.mkdir(exist_ok=True)
+            pd.DataFrame(per_class_rows).to_csv(
+                RESULTS_DIR / "unsw_resampling_per_class.csv", index=False)
+            pd.DataFrame(summary_rows).to_csv(
+                RESULTS_DIR / "unsw_resampling_summary.csv", index=False)
 
     per_class = pd.DataFrame(per_class_rows)
     summaries = pd.DataFrame(summary_rows)
