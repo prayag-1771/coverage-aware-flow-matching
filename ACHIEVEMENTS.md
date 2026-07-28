@@ -732,6 +732,45 @@ cached-generator work.
 
 ---
 
+## 3b-ii. Diagnosed: collapses follow the synthetic batch, and no quality metric sees them ⭐
+
+CICIDS2017 Bot, flow matching. Five generator seeds, each evaluated with **two
+classifier seeds on identical synthetic data** — the test that separates a bad
+generated batch from an unlucky classifier fit.
+
+| gen seed | clf seed | F1 | recall | PR-AUC | synth NN dist | leak→BENIGN |
+|---|---|---|---|---|---|---|
+| 3 | 3 | **0.6016** | 0.4617 | 0.7724 | 20.961 | **0.54** |
+| 3 | 103 | **0.6043** | 0.4736 | 0.7843 | 20.961 | **0.53** |
+| 0,1,2,4 | both | 0.82–0.84 | 0.74–0.94 | 0.934–0.941 | 20.76–21.37 | 0.06–0.26 |
+
+**Both classifier fits collapsed on generator seed 3; no other seed collapsed
+under either fit.** The failure follows the synthetic sample, so the fix has to be
+in the generator, not the classifier.
+
+| | collapsed | healthy | what it rules out |
+|---|---|---|---|
+| PR-AUC | 0.778 | 0.938 | not a threshold/argmax artifact — ranking degrades |
+| recall | 0.468 | 0.809 | recall halves |
+| precision | 0.849 | 0.861 | **unchanged** — not false alarms, missed attacks |
+| leak → BENIGN | 0.54 | 0.06–0.26 | missed Bot absorbed into benign traffic |
+| **synthetic NN distance** | **20.961** | **21.069** | **detects nothing** |
+
+**The quality metric cannot see the bad batch.** Nearest-neighbour distance —
+the standard pre-training check on synthetic data — is 20.961 for the batch that
+halved recall and 21.069 for the batches that worked. A 0.5% difference, in the
+wrong direction.
+
+**Consequence.** "Validate your synthetic data before using it" is standard
+advice and, on this evidence, does not work: the batch that destroys performance
+is indistinguishable beforehand from the batches that do not. This is the fifth
+independent fidelity measure that fails to predict utility (§1.1, §3b, §3c) and
+the most practically damaging, because it removes the obvious mitigation for
+generative instability.
+
+*Reproduce:* `experiments/11_collapse_diagnosis.py`,
+`results/collapse_diagnosis.csv`
+
 ## 3c. SHAP: augmentation rewrites the decision rule
 
 NSL-KDD, TreeSHAP on XGBoost, 2,000 test rows. L1 distance between normalised
