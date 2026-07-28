@@ -416,6 +416,61 @@ Averaged in, the `none` arm reads macro-F1 0.775 instead of 0.943 — which woul
 have made doing nothing look far worse than it is and **quietly reversed the main
 conclusion of the table above.**
 
+### 3.3c Generative methods have a higher ceiling and a 20% failure rate
+
+**This corrects §3.3.** That section reported that every augmentation method
+underperforms the unaugmented baseline on CICIDS2017 Bot. That was an artifact of
+our own analysis, not a property of the methods.
+
+The degenerate filter excludes *total* collapses — macro-F1 below ~1/n_classes.
+The baseline's seed 4 qualifies (0.0996) and was removed. But generative arms
+fail *partially*: Bot drops to ~0.62 while macro-F1 stays near 0.85, so those
+seeds slipped through and stayed in the mean. **The baseline had its worst seed
+removed and the generative arms did not**, which biased the comparison toward
+doing nothing.
+
+Reporting the median alongside the mean fixes it without any further decisions
+about which runs to discard:
+
+| arm | Bot mean | **Bot median** | gap |
+|---|---|---|---|
+| **diffusion** | 0.7886 | **0.8303** | −0.042 |
+| flowmatch | 0.7876 | **0.8243** | −0.037 |
+| flowmatch_pertype | 0.7910 | **0.8233** | −0.032 |
+| none | 0.8218 | 0.8228 | −0.001 |
+| random oversample | 0.8167 | 0.8174 | −0.001 |
+| SMOTE | 0.7829 | 0.7830 | −0.000 |
+| ADASYN | 0.7806 | 0.7806 | 0.000 |
+
+**By median all three generative methods beat the baseline and diffusion is
+best. By mean all three lose to it.** Both are true and they answer different
+questions:
+
+- **median** — what you get when it works
+- **mean** — what you get including failures
+
+A deployment decision needs both. Reporting either alone misleads, in opposite
+directions.
+
+**The mean-minus-median gap is the cleanest instability metric in this work:**
+~0.000 for every classical arm, −0.032 to −0.042 for every generative one. That
+single column separates the two families.
+
+**Failure rates on CICIDS2017 Bot** (seed F1 below 85% of that arm's median):
+
+| family | arms with collapses |
+|---|---|
+| generative | **3 of 3** — diffusion, flowmatch, pertype, one seed each (20%) |
+| classical | **0 of 4** — none, ROS, SMOTE, ADASYN |
+
+Perfect separation. Every learned generator fails one run in five; no
+interpolation method fails at all.
+
+*Caveat on the detector:* an 85%-of-median threshold is only informative where F1
+is high. On UNSW's Analysis and Backdoor (F1 0.01–0.11) it fires for nearly every
+arm including `none`, because small absolute differences are large relative ones.
+Read it on Bot and Shellcode, not on classes that are already near zero.
+
 ### 3.4 The three datasets disagree
 
 | | NSL-KDD | UNSW-NB15 | CICIDS2017 |

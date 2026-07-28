@@ -91,17 +91,49 @@ def report(name: str, stem: str, rare: list[str]) -> None:
     print(good.groupby("arm")[["accuracy", "balanced_accuracy", "macro_f1"]]
           .agg(["mean", "std"]).reindex(order).round(4).to_string())
 
-    print("\nRARE-CLASS F1")
+    # Mean AND median. The degenerate filter above catches only total collapses
+    # (macro-F1 below ~1/n_classes). Generative arms fail differently: on CICIDS2017
+    # Bot, each of diffusion, flowmatch and flowmatch_pertype has exactly one seed in
+    # five where that class drops to ~0.62 while macro-F1 stays near 0.85 -- a partial
+    # collapse the filter does not see. Reporting means alone would exclude the
+    # baseline's bad seed while keeping theirs, favouring `none` for a reason unrelated
+    # to the methods. The median is robust to one outlier in five and requires no
+    # judgement about which runs to discard, so both are shown and the spread between
+    # them signals instability.
+    print("\nRARE-CLASS F1  (median is robust to the 1-in-5 partial collapses)")
     rows = []
     for cls in rare:
         sub = pc_good[pc_good["class"] == cls]
         if sub.empty:
             continue
-        agg = sub.groupby("arm")["f1"].agg(["mean", "std", "count"]).reindex(order)
+        agg = sub.groupby("arm")["f1"].agg(["mean", "median", "std", "count"]).reindex(order)
+        agg["mean_vs_med"] = (agg["mean"] - agg["median"]).round(4)
         agg.columns = pd.MultiIndex.from_product([[cls], agg.columns])
         rows.append(agg)
     if rows:
         print(pd.concat(rows, axis=1).round(4).to_string())
+
+    # Per-class instability: seeds far below that arm's own median for that class.
+    # Threshold is 85% of median. CICIDS2017 Bot collapses land at ~0.62 against a
+    # median of ~0.83, i.e. 75% -- a 70% cutoff missed them entirely. This surfaces
+    # instability for reporting; nothing is excluded on the strength of it, since both
+    # mean and median are shown above.
+    print("\nPARTIAL COLLAPSES (seed F1 below 85% of that arm's median for the class)")
+    any_found = False
+    for cls in rare:
+        sub = pc_good[pc_good["class"] == cls]
+        for arm, g in sub.groupby("arm"):
+            med = g["f1"].median()
+            if med <= 0.01:  # class is dead for this arm; not an instability finding
+                continue
+            bad = g.loc[g["f1"] < 0.85 * med]
+            if len(bad):
+                any_found = True
+                print(f"  {cls:<12} {arm:<20} {len(bad)}/{len(g)} seeds "
+                      f"({len(bad)/len(g):.0%})  median {med:.3f}  "
+                      f"collapsed to {', '.join(f'{v:.3f}' for v in bad['f1'])}")
+    if not any_found:
+        print("  None.")
 
     # Winner per class -- the point is that it is rarely the same arm twice.
     print("\nBEST ARM PER RARE CLASS")
