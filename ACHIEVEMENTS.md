@@ -859,6 +859,83 @@ Both turn out to be wrong in the same direction — more is not better.*
 
 ---
 
+## 3e. Class overlap predicts difficulty, not what augmentation will do about it
+
+**A prediction that failed, recorded because it failed.** The comparison threw up
+a pattern nobody went looking for: generative augmentation helps some rare
+classes and does nothing for others, and the split is not by dataset, not by
+class size, and not by generator fit quality.
+
+| | train rows | every arm's best F1 |
+|---|---|---|
+| UNSW-NB15 Analysis | 2,000 | 0.047 → 0.073 |
+| UNSW-NB15 Shellcode | 1,133 | 0.495 → 0.538 |
+| CICIDS2017 Bot | 1,369 | 0.822 → 0.830 |
+
+Analysis has **more** training data than Shellcode and still cannot be learned.
+The hypothesis was geometric: Analysis rows sit inside the region occupied by
+other classes, so no synthetic data drawn from them can create a boundary that
+does not exist. If true, an overlap statistic computed on real training data
+**before any generator is fitted** would tell a practitioner in advance whether
+augmenting a class is worth the GPU hours.
+
+Three standard complexity measures (Lorena et al. 2019; Oh 2011), computed on the
+encoded training split with exact blocked k-NN on GPU — 5,000 queries against
+CICIDS2017's full 1.98M rows, not a subsample, because subsampling bias depends
+on class size and class size is the variable under test.
+
+| measure | vs baseline F1 | vs best gain | vs generative advantage |
+|---|---|---|---|
+| N3 (1-NN error) | **−0.770** (p=0.0001) | +0.568 (p=0.011) | −0.150 (p=0.54) |
+| R-value (k=10) | **−0.770** (p=0.0001) | +0.637 (p=0.003) | −0.154 (p=0.53) |
+| nearest-enemy ratio | +0.416 (p=0.077) | −0.312 (p=0.19) | −0.254 (p=0.29) |
+
+Spearman rho over 19 augmented classes; 3 majority classes and 2 below the
+test-support threshold excluded before testing.
+
+**The middle column does not survive contact with the confound.** Overlap drives
+the baseline down, and a low baseline mechanically leaves more room to gain.
+Controlling for baseline F1 by partial correlation:
+
+| | raw rho | controlling for baseline F1 |
+|---|---|---|
+| N3 vs best gain | +0.568 | **−0.105** |
+| R-value vs best gain | +0.637 | **+0.070** |
+
+**Three conclusions, one of them the opposite of what was predicted.**
+
+1. Overlap is an excellent predictor of *difficulty* — rho −0.77 at p=0.0001. That
+   is a sanity check passing, not a result.
+2. Overlap carries **no information about how much augmentation recovers** once
+   difficulty is divided out. The intuitive rule "spend your compute on the
+   overlapping classes" is not supported.
+3. Overlap does **not** predict which family to reach for (rho −0.15, p=0.54).
+   Shellcode (N3 0.654) is where generative methods win by the largest margin
+   (+0.114); Worms (N3 0.769) is where they lose by the largest (−0.159). Both
+   are heavily overlapped. What separates them is training rows — 1,133 versus
+   130 — not geometry.
+
+**This is the third cheap predictor of utility to fail.** The quality gate
+(§1.1), SHAP divergence (§3c) and now class geometry all correlate with something
+plausible and none of them predicts whether augmentation will help. That
+convergence is a stronger and more coherent claim than the positive mechanism
+originally expected, and it is a claim about measurement practice rather than
+about any one generator.
+
+**Stated limit:** 19 classes, of which 13 have enough headroom for `recovery` to
+be defined. A null at that sample size is weak evidence of absence, not proof.
+
+*A metric bug was caught here and is worth recording. The nearest-enemy ratio
+first came back at values around 10⁸. These datasets contain large numbers of
+exact duplicate rows, so the distance to the nearest same-class row is frequently
+exactly zero, and a per-row ratio diverges. Replaced with a ratio of means and
+the duplicate fraction reported alongside. The measure still says the least of
+the three, because for a well-separated class almost no query has any
+out-of-class row among its ten neighbours, so it rests on a handful of boundary
+points.* — `experiments/13_class_overlap.py`, `results/class_overlap.csv`
+
+---
+
 ## 4. Methodological corrections made to our own work
 
 Recorded because each was caught by measurement rather than assumed.
@@ -949,6 +1026,44 @@ trees degrade to brute force. 150s per seed on UNSW's 175k rows, **2,400–4,800
 per seed on CICIDS2017's 1.98M** — and one aborted attempt exceeded 25 minutes
 without finishing. Papers applying ADASYN to CICIDS2017 are either subsampling
 heavily or not saying so.
+
+*Profiled properly when it became the largest single line item in the second
+classifier sweep. The cost is not where it looks: the expensive queries come from
+the **large** minority classes, not the rare ones. imblearn queries the index with
+every row of each class it augments, so PortScan sends 111,163 queries and DDoS
+89,617, while Bot sends 1,369. Measured at CICIDS2017 scale, 1.98M references ×
+78 dimensions:*
+
+| configuration | 20k queries | projected per ADASYN pass |
+|---|---|---|
+| `auto`, 1 job (imblearn default) | 269s | 48 min |
+| `brute`, all 8 cores | 243s | 43 min |
+| exact blocked search on GPU | 44s | 8 min |
+
+*`n_jobs=-1` buys 1.1×, not the 8× the core count suggests, because sklearn's
+brute-force path is already threaded through BLAS — the job-level knob is close to
+a no-op. **The GPU port was measured, verified to return identical neighbours, and
+then deliberately not used:** it computes in float32 while the already-completed
+XGBoost ADASYN runs used float64 on CPU, and swapping precision mid-comparison
+would buy 2.8 hours by making the two classifiers' ADASYN arms non-comparable.
+The point of the sweep is comparability.*
+
+**A 60-epoch cap on the MLP is not binding, which had to be checked rather than
+assumed.** Early stopping never fires on NSL-KDD (max 53 of 60) but hits the cap
+in 13 of 20 UNSW runs, which looks like an under-trained model on one of three
+datasets. Re-tested at cap 200:
+
+| arm | cap 60 | cap 200 | macro-F1 |
+|---|---|---|---|
+| `none` | ran 60 | ran 65 | 0.4327 both |
+| `random_oversample` | ran 56 | ran 56 | 0.4251 both |
+
+*Identical to four decimal places, including every rare-class F1. `fit` restores
+the best-validation checkpoint rather than the final epoch, so hitting the cap
+does not mean the reported model is the epoch-60 model — the extra epochs only
+confirm the earlier checkpoint was already the best. No re-run needed. Recorded
+because "the budget ran out" and "the model converged" produce the same log line
+and only one of them is a problem.*
 
 **Flow matching saturates a 4 GB GPU on CICIDS2017.** Unchunked sampling held the
 card at 94% and made runtimes meaningless: 20,898s, 962s and 4,287s for identical
