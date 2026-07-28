@@ -64,6 +64,7 @@ def augment(
     ratio: float = 1.0,
     types: pd.Series | None = None,
     max_target: int | None = None,
+    gen_kwargs: dict | None = None,
 ) -> tuple[pd.DataFrame, pd.Series]:
     """Apply one augmentation arm to a *training* split.
 
@@ -92,7 +93,8 @@ def augment(
         # generator_seed defaults to 0, so every classifier seed shares one fitted
         # generator per class; only sampling is reseeded. See _GENERATOR_CACHE.
         return _generative(
-            X, y, arm, categorical_columns, sampling_strategy, seed, types
+            X, y, arm, categorical_columns, sampling_strategy, seed, types,
+            gen_kwargs=gen_kwargs or {},
         )
 
     if arm == "random_oversample":
@@ -158,6 +160,7 @@ def _generative(
     seed: int,
     types: pd.Series | None,
     generator_seed: int = 0,
+    gen_kwargs: dict | None = None,
 ) -> tuple[pd.DataFrame, pd.Series]:
     """Fit a flow-matching generator per minority class and top it up to target.
 
@@ -179,7 +182,8 @@ def _generative(
             continue
 
         subset = X.loc[y == cls].reset_index(drop=True)
-        key = (arm, cls, generator_seed, len(subset))
+        gk = gen_kwargs or {}
+        key = (arm, cls, generator_seed, len(subset), tuple(sorted(gk.items())))
 
         if key in _GENERATOR_CACHE:
             gen = _GENERATOR_CACHE[key]
@@ -190,7 +194,7 @@ def _generative(
                 subset_types = types.loc[y == cls].reset_index(drop=True)
                 try:
                     gen = PerTypeFlowMatcher(
-                        categorical_columns, numeric_columns, seed=generator_seed
+                        categorical_columns, numeric_columns, seed=generator_seed, **gk
                     ).fit(subset, subset_types)
                 except ValueError:
                     # No attack type in this class cleared the minimum sample count.
@@ -213,11 +217,11 @@ def _generative(
                     ).fit(subset)
             elif arm == "diffusion":
                 gen = TabularDiffusion(
-                    categorical_columns, numeric_columns, seed=generator_seed
+                    categorical_columns, numeric_columns, seed=generator_seed, **gk
                 ).fit(subset)
             else:
                 gen = TabularFlowMatcher(
-                    categorical_columns, numeric_columns, seed=generator_seed
+                    categorical_columns, numeric_columns, seed=generator_seed, **gk
                 ).fit(subset)
             _GENERATOR_CACHE[key] = gen
 

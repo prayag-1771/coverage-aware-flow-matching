@@ -104,16 +104,17 @@ def main() -> None:
     print("\n" + "=" * 78)
     print("INTEGRATION STEPS  (flow matching only; diffusion uses DDIM at the same count)")
     print("=" * 78)
-    from src.augment import flow_matching as fm_mod
-    original = fm_mod.TabularFlowMatcher.steps
-
+    # Passed explicitly rather than by setting TabularFlowMatcher.steps: on a
+    # dataclass the default is baked into the generated __init__, so assigning the
+    # class attribute has no effect on new instances. An earlier version did exactly
+    # that and produced identical F1 *and* identical runtime at 10, 50 and 100 steps,
+    # which is what exposed the bug.
     for steps in STEPS:
         clear_generator_cache()
-        fm_mod.TabularFlowMatcher.steps = steps
         for seed in SEEDS:
             t0 = time.time()
             Xa, ya = augment(X, y, "flowmatch", CATEGORICAL_COLUMNS,
-                             seed=seed, types=types)
+                             seed=seed, types=types, gen_kwargs={"steps": steps})
             tab, summ = evaluate(train, test, Xa, ya, seed)
             rows.append({
                 "ablation": "steps", "arm": "flowmatch", "setting": steps, "seed": seed,
@@ -127,8 +128,6 @@ def main() -> None:
               f"r2l={np.mean([a['r2l_f1'] for a in agg]):.4f}  "
               f"u2r={np.mean([a['u2r_f1'] for a in agg]):.4f}  "
               f"({np.mean([a['seconds'] for a in agg]):.0f}s)")
-
-    fm_mod.TabularFlowMatcher.steps = original
 
     df = pd.DataFrame(rows)
     RESULTS_DIR.mkdir(exist_ok=True)
