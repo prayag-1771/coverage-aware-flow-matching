@@ -20,12 +20,12 @@ from imblearn.over_sampling import ADASYN, SMOTE, SMOTENC, RandomOverSampler
 
 ARMS = [
     "none", "random_oversample", "smote", "adasyn",
-    "diffusion", "flowmatch", "flowmatch_pertype",
+    "ctgan", "diffusion", "flowmatch", "flowmatch_pertype",
 ]
 
 # Generative arms need the fine-grained attack type, not just the coarse class, so
 # `augment` takes an optional `types` argument. The classical samplers ignore it.
-GENERATIVE_ARMS = {"diffusion", "flowmatch", "flowmatch_pertype"}
+GENERATIVE_ARMS = {"ctgan", "diffusion", "flowmatch", "flowmatch_pertype"}
 
 
 def _target_counts(
@@ -164,6 +164,7 @@ def _generative(
     Unlike the classical samplers, real rows are always retained in full and only the
     shortfall is synthesised, so no real training data is displaced by generated data.
     """
+    from src.augment.ctgan_arm import CTGANGenerator
     from src.augment.diffusion import TabularDiffusion
     from src.augment.flow_matching import TabularFlowMatcher
     from src.augment.per_type import PerTypeFlowMatcher
@@ -195,6 +196,18 @@ def _generative(
                     # No attack type in this class cleared the minimum sample count.
                     # Fall back to a class-level generator rather than skipping the
                     # class, so every arm still rebalances to the same target.
+                    gen = TabularFlowMatcher(
+                        categorical_columns, numeric_columns, seed=generator_seed
+                    ).fit(subset)
+            elif arm == "ctgan":
+                try:
+                    gen = CTGANGenerator(
+                        categorical_columns, numeric_columns, seed=generator_seed
+                    ).fit(subset)
+                except (ValueError, RuntimeError):
+                    # Too few rows for CTGAN's conditional sampler / PacGAN. Fall back
+                    # so the arm still rebalances to target rather than silently
+                    # leaving the class short and skewing the comparison.
                     gen = TabularFlowMatcher(
                         categorical_columns, numeric_columns, seed=generator_seed
                     ).fit(subset)
