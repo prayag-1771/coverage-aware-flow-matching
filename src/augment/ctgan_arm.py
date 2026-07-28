@@ -35,6 +35,13 @@ MIN_ROWS = 50
 # than silently reduced.
 DEFAULT_EPOCHS = 50
 
+# CTGAN's default batch of 500 leaves the GPU at ~23% and the CPU at ~0.9 cores: too
+# little work per step for the device to matter, so time goes to Python and kernel
+# launch overhead. This is the same failure that made flow matching appear only 1.4x
+# faster on GPU until its batch was raised, which then gave 14x. Must stay a multiple
+# of `pac` (default 10), which the library enforces.
+DEFAULT_BATCH = 4000
+
 
 @dataclass
 class CTGANGenerator:
@@ -50,6 +57,7 @@ class CTGANGenerator:
     categorical_columns: list[str]
     numeric_columns: list[str]
     epochs: int = DEFAULT_EPOCHS
+    batch_size: int = DEFAULT_BATCH
     seed: int = 0
 
     _model: object | None = field(default=None, init=False)
@@ -74,7 +82,11 @@ class CTGANGenerator:
         # architecture-matched.
         discrete = [c for c in self.categorical_columns if c in df.columns]
 
-        model = CTGAN(epochs=self.epochs, verbose=False, cuda=True)
+        # Batch cannot exceed the class size, and must remain a multiple of pac=10.
+        batch = min(self.batch_size, max(10, (len(df) // 10) * 10))
+        model = CTGAN(
+            epochs=self.epochs, batch_size=batch, verbose=False, cuda=True
+        )
         model.fit(df, discrete_columns=discrete)
         self._model = model
         return self
