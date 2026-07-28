@@ -76,9 +76,27 @@ def split_mlp_results() -> list[str]:
     than teach 08 a second file layout -- and risk the two classifiers being processed
     by two slightly different code paths -- the MLP results are reshaped to match.
     """
-    pc = pd.read_csv(RESULTS_DIR / "mlp_per_class.csv")
-    sm = pd.read_csv(RESULTS_DIR / "mlp_summary.csv")
-    expected = len(sm["arm"].unique()) * 5 if len(sm) else 0
+    # Experiment 12 can be split across processes -- the CPU-bound ADASYN arm runs
+    # alongside the GPU-bound generative arms -- so its output arrives as shards that
+    # are recombined here. Named explicitly rather than globbed, because this function
+    # also *writes* files matching any plausible mlp_*.csv pattern and a glob would
+    # start reading its own output on the second invocation.
+    SHARDS = ["", "_adasyn"]
+    pc = pd.concat(
+        [pd.read_csv(RESULTS_DIR / f"mlp{s}_per_class.csv")
+         for s in SHARDS if (RESULTS_DIR / f"mlp{s}_per_class.csv").exists()],
+        ignore_index=True,
+    )
+    sm = pd.concat(
+        [pd.read_csv(RESULTS_DIR / f"mlp{s}_summary.csv")
+         for s in SHARDS if (RESULTS_DIR / f"mlp{s}_summary.csv").exists()],
+        ignore_index=True,
+    )
+    # Completeness is judged against the full arm list, not against however many arms
+    # happen to appear in the shards present -- otherwise a dataset missing ADASYN
+    # entirely would look complete at 7 arms and be compared on a different arm set
+    # from the XGBoost side.
+    expected = 8 * 5
     written = []
     for _, (key, stem, _) in DATASETS.items():
         p, s = pc[pc["dataset"] == key], sm[sm["dataset"] == key]
