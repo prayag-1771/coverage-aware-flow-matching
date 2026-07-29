@@ -839,20 +839,32 @@ and on this evidence produces no benefit.
 
 ### Integration steps — fewer is better, not merely sufficient
 
-| steps | R2L F1 | U2R F1 | seconds |
-|---|---|---|---|
-| **10** | **0.3179** | **0.4517** | 90 |
-| 50 | 0.3018 | 0.4385 | 87 |
-| 100 | 0.3028 | 0.4479 | 131 |
+| steps | R2L F1 | U2R F1 |
+|---|---|---|
+| **10** | **0.3179** | **0.4517** |
+| 50 | 0.3018 | 0.4385 |
+| 100 | 0.3028 | 0.4479 |
 
-Ten steps is best on both rare classes; 100 steps costs 45% more time for
-nothing. At three seeds a 0.016 difference is not significant, so the defensible
-claim is that **performance is flat or slightly better at 10 steps and more
-integration does not help.**
+Ten steps is best on both rare classes. At three seeds a 0.016 difference is not
+significant, so the defensible claim is that **performance is flat or slightly
+better at 10 steps and more integration does not help.**
 
-This strengthens flow matching's practical case. Its advantage over diffusion is
-sampling cost, and 10 steps is **100× fewer network evaluations than standard
-1000-step DDPM** rather than the 20× implied by our default of 50.
+**Corrected 2026-07-29 — a wall-clock claim removed.** This table previously
+carried a `seconds` column (90 / 87 / 131) and the claim "100 steps costs 45%
+more time for nothing." Both were wrong. The timing column in `ablations.csv` is
+dominated by the generator fit on the first seed of each setting — 175s, 188s and
+94s, cached thereafter — and by XGBoost training on the remaining seeds. It
+therefore measures fit-time and classifier-training noise rather than integration
+cost, and is **non-monotonic in steps** (means 90 / 87 / 60). The quoted 131s does
+not appear in the current results at all; it survived from a superseded run.
+
+The efficiency claim does not need wall-clock and is stronger without it.
+**Network evaluations per generated sample are exactly the step count** — that is
+arithmetic, not a measurement. Flat accuracy at 10 steps therefore means 10×
+fewer evaluations than 100, and **100× fewer than standard 1000-step DDPM**,
+rather than the 20× implied by our default of 50. Wall-clock at this scale is
+dominated by the classifier, not the generator, so it could not have shown this
+either way.
 
 *Both defaults were chosen because they are common, not because they were tested.
 Both turn out to be wrong in the same direction — more is not better.*
