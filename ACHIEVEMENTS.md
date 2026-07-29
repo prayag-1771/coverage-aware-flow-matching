@@ -1035,6 +1035,46 @@ produces one reproducible improvement.** Interpolation methods produce fourteen
 reproducible effects, half of which are damage. §1.0a's central negative result is
 the part robust to the classifier; the positive results are not.
 
+### The gap between the two protocols is the finding — not the second number alone
+
+Reporting only "one reproducible improvement" understates what happened, and an
+earlier draft of this section did exactly that. **Under XGBoost alone — the
+protocol this field actually uses — generative augmentation produces 11
+statistically significant improvements**, six of them surviving Holm-Bonferroni
+correction:
+
+| dataset | class | arm | gain | Holm p |
+|---|---|---|---|---|
+| NSL-KDD | u2r | diffusion | **+0.1878** | 0.0021 |
+| NSL-KDD | u2r | flowmatch | **+0.1677** | 0.0004 |
+| NSL-KDD | r2l | diffusion | **+0.0971** | 0.0037 |
+| NSL-KDD | r2l | flowmatch_pertype | +0.0712 | 0.0219 |
+| NSL-KDD | u2r | flowmatch_pertype | +0.0591 | 0.0021 |
+| UNSW-NB15 | Shellcode | ctgan | +0.0449 | 0.0217 |
+| UNSW-NB15 | Backdoor | flowmatch_pertype | +0.0442 | 0.1328 |
+| UNSW-NB15 | Backdoor | flowmatch | +0.0440 | 0.1038 |
+| UNSW-NB15 | Worms | flowmatch | +0.0419 | 0.4629 |
+| UNSW-NB15 | Shellcode | diffusion | +0.0218 | 0.2267 |
+| NSL-KDD | r2l | flowmatch | +0.0459 | 0.0919 |
+
+Against 7 significant harms. Generative arms also beat the best classical arm
+outright on **4 of 9** rare classes, Shellcode by +0.114.
+
+**These are real, correctly computed, and would be publishable on their own terms.**
+A +0.19 F1 gain at Holm-corrected p=0.002 is not noise, and nothing in this project
+shows the arithmetic is wrong.
+
+What the second classifier shows is that **1 of the 11 survives**. The contribution
+is therefore not "generative augmentation fails" — it is:
+
+> Under the standard single-classifier protocol we obtain 11 significant
+> improvements, 6 surviving multiple-comparison correction, with gains to +0.19 F1.
+> Changing only the classifier leaves 1.
+
+Both halves are needed. The first alone is the paper this field keeps publishing;
+the second alone reads as a failed project and discards the evidence that makes
+the first one interesting.
+
 ### Ruled out: this is not the scaler
 
 The obvious objection had to be eliminated first. The pipeline fits
