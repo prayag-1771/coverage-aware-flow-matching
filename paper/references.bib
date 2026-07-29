@@ -9,13 +9,23 @@
 % Entries marked % CHECK have at least one field I could not confirm.
 % =============================================================================
 
+% Base paper. Verified against the publisher page 2026-07-29: article type
+% "Article" (original research, open access), sole author, published 01 July 2025.
+% Uses the same three datasets as this work, which is why it anchors the comparison.
+% Note it evaluates with *both* an optimized XGBoost and a sequential neural network
+% -- directly relevant to the classifier-dependence result, since the base paper's own
+% design spans the two families we find disagree.
 @article{alsubaei2025smart,
   author  = {Alsubaei, Faisal S.},
   title   = {Smart deep learning model for enhanced {IoT} intrusion detection},
   journal = {Scientific Reports},
+  volume  = {15},
+  number  = {1},
+  pages   = {20577},
   year    = {2025},
-  note    = {\url{https://www.nature.com/articles/s41598-025-06363-5}}
-  % CHECK: volume, article number, page range.
+  month   = jul,
+  doi     = {10.1038/s41598-025-06363-5},
+  url     = {https://www.nature.com/articles/s41598-025-06363-5}
 }
 
 @article{yang2025diffids,
