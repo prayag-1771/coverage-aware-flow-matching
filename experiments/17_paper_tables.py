@@ -98,7 +98,10 @@ def table_full_comparison(dataset: str) -> str:
     sd = pc[pc["class"].isin(rare)].pivot_table(
         index="arm", columns="class", values="f1", aggfunc="std").reindex(arms)
 
-    key = dataset.replace("-", "").lower()
+    # Short, stable keys. These must match the \ref calls in main.tex; deriving them
+    # from the dataset name gave tab:full_unswnb15 where the manuscript referenced
+    # tab:full_unsw, which LaTeX renders as "??" rather than failing.
+    key = {"NSL-KDD": "nslkdd", "UNSW-NB15": "unsw", "CICIDS2017": "cicids"}[dataset]
     lines = [
         r"\begin{table}[t]", r"\centering",
         f"\\caption{{Per-class F1 on {dataset}, mean $\\pm$ standard deviation over "
