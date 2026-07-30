@@ -14,7 +14,11 @@
 % datasets and will not change.
 %==============================================================================
 
-\documentclass[journal]{IEEEtran}
+% [conference], not [journal]: the supplied author block uses \IEEEauthorblockN /
+% \IEEEauthorblockA / \and, which only lay out side by side in conference mode.
+% Note this changes the whole document format -- if the target is IEEE Access,
+% switch to ieeeaccess.cls, which has its own byline convention again.
+\documentclass[conference]{IEEEtran}
 
 \usepackage{amsmath}
 % amssymb, not just amsmath: \mathbb lives here. Without it the blackboard-bold
@@ -66,27 +70,28 @@
 
 \title{Coverage-Aware Flow Matching for\\Rare-Attack Detection}
 
-% Author block.
-%
-% The blocks supplied used \IEEEauthorblockN / \IEEEauthorblockA / \and, which are
-% IEEEtran's *conference* interface. This document is \documentclass[journal], where
-% authors are given as a single \author with affiliations in \thanks notes; mixing
-% the two produces a conference-style byline in a journal layout. Names, emails and
-% affiliations are reproduced exactly as supplied.
-%
-% The ordinals were "1st" and "5th"; with two authors that reads as a paste artefact
-% from a five-author template, so they are 1st and 2nd here. Restore them if the
-% author list is going to grow.
-%
-% If this is submitted to IEEE Access, swap \documentclass to ieeeaccess.cls and the
-% byline changes again -- Access uses \IEEEauthorblockN with member grades.
-\author{Prayag~Sharma and Ravi~Tiwari%
-\thanks{P. Sharma is with the School of Computer Science and Engineering, Vellore
-Institute of Technology, Chennai, India (e-mail:
-prayag.sharma2024@vitstudent.ac.in).}%
-\thanks{R. Tiwari is with the School of Electronics Engineering, Vellore Institute
-of Technology, Chennai, India (e-mail: ravi.tiwari@vit.ac.in).}%
-\thanks{Manuscript prepared \today.}}
+% Author block, verbatim as supplied: side-by-side blocks with the affiliation under
+% each name, which is IEEEtran's conference interface (\IEEEauthorblockN /
+% \IEEEauthorblockA / \and). It needs \documentclass[conference]; under [journal] the
+% same markup collapses to a single centred byline with the affiliations pushed into
+% footnotes, which is what the earlier draft produced.
+\author{
+\IEEEauthorblockN{1\textsuperscript{st} Prayag Sharma}
+\IEEEauthorblockA{
+\textit{School of Computer Science and Engineering} \\
+\textit{Vellore Institute of Technology} \\
+Chennai, India \\
+prayag.sharma2024@vitstudent.ac.in
+}
+\and
+\IEEEauthorblockN{5\textsuperscript{th} Ravi Tiwari}
+\IEEEauthorblockA{
+\textit{School of Electronics Engineering} \\
+\textit{Vellore Institute of Technology} \\
+Chennai, India \\
+ravi.tiwari@vit.ac.in
+}
+}
 
 \maketitle
 
