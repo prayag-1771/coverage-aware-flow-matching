@@ -148,6 +148,23 @@ def main() -> int:
     # LaTeX itself compiles perfectly. Three entries here carried CHECK notes between
     # their last field and the closing brace.
     bib_text = BIB.read_text(encoding="utf-8")
+
+    # An at-sign anywhere outside an entry -- including inside a % comment -- starts
+    # a new record as far as BibTeX is concerned; it does not honour % between
+    # entries. A note reading "Corrected from @article: ..." was parsed as an entry
+    # and reported as "I was expecting a `{' or a `('".
+    in_entry = 0
+    for lineno, line in enumerate(bib_text.splitlines(), 1):
+        stripped = line.strip()
+        if stripped.startswith("@"):
+            in_entry = 1
+        elif in_entry and stripped == "}":
+            in_entry = 0
+        elif not in_entry and "@" in line:
+            problems.append(
+                f"references.bib line {lineno}: an at-sign outside an entry starts a "
+                "record for BibTeX even inside a % comment -- remove or reword it")
+
     entries = re.findall(r"@(\w+)\s*\{\s*([^,]+),(.*?)\n\}", bib_text, re.S)
     for kind, key, body in entries:
         if re.search(r"^\s*%", body, re.M):
