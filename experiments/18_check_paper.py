@@ -47,6 +47,10 @@ KNOWN = {
     "ifCLASSINFOpdf", "else", "fi", "tfrac", "dfrac", "mathbf", "mid",
     "bigcup", "bigcap", "bigoplus", "ifCLASSOPTIONcaptionsoff",
     "interdisplaylinepenalty",
+    # Greek not already listed, and the standard length registers used to size floats.
+    "kappa", "eta", "zeta", "iota", "nu", "xi", "chi", "upsilon", "varepsilon",
+    "Gamma", "Lambda", "Phi", "Psi", "Theta",
+    "columnwidth", "textwidth", "linewidth", "textheight", "hsize",
 }
 
 
