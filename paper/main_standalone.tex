@@ -916,9 +916,9 @@ UNSW-NB15 & Shellcode & CTGAN & 0.4954 & \textbf{0.5402} & \textbf{+0.0449}$^{*}
 \end{table*}
 % ---- end inline ----
 
-egin{figure*}[t]
+\begin{figure*}[t]
 \centering
-\includegraphics[width=	extwidth]{figures/fig1_effects}
+\includegraphics[width=\textwidth]{figures/fig1_effects}
 \caption{Every effect whose 95\% bootstrap confidence interval excludes zero, across three datasets, nine rare classes and seven augmentation methods. Points are mean change in F1 against the unaugmented pipeline; bars are the bootstrap interval. Twenty-two effects are improvements and fourteen are degradations. Sign is carried by position about the zero line as well as by hue, so the encoding survives greyscale reproduction.}
 \label{fig:effects}
 \end{figure*}
@@ -1026,7 +1026,7 @@ U2R & 1/4 & {58\%} & 0.2784 & 0.4279 & {-0.1496} \\
 \end{table}
 % ---- end inline ----
 
-egin{figure}[t]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/fig2_coverage}
 \caption{Sub-class coverage predicts the outcome. Per-type generation beats the best classical resampler on the class where the modelled attack types account for $97\%$ of training records, and loses on the class where they account for $58\%$. NSL-KDD, mean over five seeds.}
@@ -1083,7 +1083,7 @@ CICIDS2017 & Bot & 0.8303 & 0.8174 & \textbf{+0.0129} \\
 \end{table}
 % ---- end inline ----
 
-egin{figure}[t]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/fig3_head_to_head}
 \caption{Best generative arm minus best classical arm on every rare class, by median over five seeds. The generative family leads on four of nine classes. The largest deficit is Worms, where plain random oversampling wins by $0.159$ on a class with 130 training records.}
@@ -1154,9 +1154,9 @@ The practical consequence is that a generator selected on fidelity grounds may n
 the generator that improves detection, and that a study reporting only fidelity
 cannot support a recommendation about utility.
 
-egin{figure*}[t]
+\begin{figure*}[t]
 \centering
-\includegraphics[width=0.72	extwidth]{figures/fig5_quality_utility}
+\includegraphics[width=0.72\textwidth]{figures/fig5_quality_utility}
 \caption{Attribution divergence against rare-class F1 on NSL-KDD. Each point is one augmentation method; the horizontal axis is the $L_1$ distance between the SHAP profile of the augmented model and that of the unaugmented one. Neither class shows a usable relationship, and on R2L the method that diverges most from the baseline decision rule is also the best performing.}
 \label{fig:quality}
 \end{figure*}
@@ -1197,9 +1197,9 @@ Setting & R2L F1 & U2R F1 & Cost \\
 \end{table}
 % ---- end inline ----
 
-egin{figure*}[t]
+\begin{figure*}[t]
 \centering
-\includegraphics[width=0.78	extwidth]{figures/fig7_ablations}
+\includegraphics[width=0.78\textwidth]{figures/fig7_ablations}
 \caption{Both ablations. Accuracy is flat from ten integration steps upward, and lifting minority classes to a quarter of parity matches full rebalancing. Error bars are one standard deviation over three seeds.}
 \label{fig:ablations}
 \end{figure*}
@@ -1261,7 +1261,7 @@ All & 35 & 16 & 46\% \\
 \end{table}
 % ---- end inline ----
 
-egin{figure}[t]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/fig4_cross_classifier}
 \caption{The same augmentation effect measured under two classifier families. Each point is one (dataset, class, method) triple; axes are the change in F1 against no augmentation. Points on the dashed identity line would indicate agreement. Shaded quadrants contain effects whose sign reverses between classifiers.}
@@ -1368,7 +1368,7 @@ Diagnosis indicates the fault lies with the synthetic batch rather than the
 classifier: refitting the classifier with a different seed on the same synthetic data
 reproduces the collapse, whereas regenerating the data does not.
 
-egin{figure}[t]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/fig6_stability}
 \caption{Mean against median F1 per arm on CICIDS2017 Bot. A gap between the two

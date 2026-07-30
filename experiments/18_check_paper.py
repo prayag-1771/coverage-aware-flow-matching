@@ -59,6 +59,26 @@ def main() -> int:
     tex = PAPER.read_text(encoding="utf-8")
     problems: list[str] = []
 
+    # ---- control bytes -------------------------------------------------------
+    # Writing this file through a shell heredoc interprets the C escapes inside
+    # LaTeX commands: \begin becomes BACKSPACE + "egin", \ref becomes CR + "ef",
+    # \textwidth becomes TAB + "extwidth". LaTeX then reports
+    # "Unicode character ^^H (U+0008) not set up for use with LaTeX" and produces no
+    # PDF. Nothing else in this script notices -- braces still balance, every macro
+    # that survived is defined -- so it is checked directly, on bytes.
+    raw = PAPER.read_bytes()
+    ctrl = {0x07: "a", 0x08: "b", 0x09: "t", 0x0B: "v", 0x0C: "f"}
+    hits = []
+    for code, letter in ctrl.items():
+        n = raw.count(bytes([code]))
+        if n:
+            i = raw.find(bytes([code]))
+            ctx = raw[max(0, i - 20):i + 20].decode("utf-8", "replace")
+            hits.append(f"0x{code:02X} (was \\{letter}?) x{n} near {ctx!r}")
+    if hits:
+        problems.append("control bytes in main.tex -- a backslash was eaten: "
+                        + "; ".join(hits))
+
     # ---- macros requiring a package ------------------------------------------
     # The failure this catches: \mathbb is provided by amssymb, not by amsmath, and a
     # document loading only amsmath fails with "Undefined control sequence" and emits
