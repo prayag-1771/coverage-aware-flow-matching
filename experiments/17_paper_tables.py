@@ -288,6 +288,41 @@ def table_robustness() -> str:
     return "\n".join(lines)
 
 
+def build_standalone() -> Path:
+    """Expand every \\input into one self-contained .tex file.
+
+    Overleaf projects are uploaded file by file, and a main.tex that \\input's eight
+    table files fails with "File not found" unless the directory structure is
+    reproduced exactly. Emitting a single file removes that failure mode: upload
+    main_standalone.tex and references.bib and it builds.
+
+    main.tex remains the source of truth and keeps the \\input structure, so tables
+    are still regenerated from the result files rather than edited in place.
+    """
+    src = (ROOT / "paper" / "main.tex").read_text(encoding="utf-8")
+    out_lines = []
+    for line in src.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(r"\input{"):
+            target = stripped[len(r"\input{"):].rstrip("}")
+            path = ROOT / "paper" / (target if target.endswith(".tex") else target + ".tex")
+            out_lines.append(f"% ---- inlined from {target}.tex ----")
+            out_lines.append(path.read_text(encoding="utf-8").rstrip())
+            out_lines.append("% ---- end inline ----")
+        else:
+            out_lines.append(line)
+
+    dest = ROOT / "paper" / "main_standalone.tex"
+    header = (
+        "% GENERATED FILE -- do not edit.\n"
+        "% Produced by experiments/17_paper_tables.py from paper/main.tex with every\n"
+        "% \\input expanded in place. Edit main.tex instead and regenerate.\n"
+        "% Upload this file plus references.bib to Overleaf.\n"
+    )
+    dest.write_text(header + "\n".join(out_lines) + "\n", encoding="utf-8")
+    return dest
+
+
 def main() -> None:
     TABDIR.mkdir(parents=True, exist_ok=True)
     out = {
@@ -304,7 +339,10 @@ def main() -> None:
         (TABDIR / name).write_text(body + "\n", encoding="utf-8")
         print(f"  {name:<26} {len(body.splitlines())} lines")
     print(f"\nSaved to {TABDIR}")
-    print(r"Include with \input{tables/tab_improvements} etc.")
+    dest = build_standalone()
+    n = len(dest.read_text(encoding="utf-8").splitlines())
+    print(f"Standalone manuscript: {dest.relative_to(ROOT)} ({n:,} lines)")
+    print("Upload main_standalone.tex + references.bib to Overleaf.")
 
 
 if __name__ == "__main__":

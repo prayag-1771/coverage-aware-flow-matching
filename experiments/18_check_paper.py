@@ -54,6 +54,30 @@ def main() -> int:
     tex = PAPER.read_text(encoding="utf-8")
     problems: list[str] = []
 
+    # ---- macros requiring a package ------------------------------------------
+    # The failure this catches: \mathbb is provided by amssymb, not by amsmath, and a
+    # document loading only amsmath fails with "Undefined control sequence" and emits
+    # no PDF at all. Treating every plausible math macro as built-in, as an earlier
+    # version of this script did, misses exactly that.
+    needs = {
+        "amssymb": {"mathbb", "mathfrak", "square", "checkmark", "leqslant",
+                    "geqslant", "varnothing", "therefore"},
+        "amsmath": {"tfrac", "dfrac", "eqref", "text", "operatorname", "lVert",
+                    "rVert", "bigl", "bigr", "Bigl", "Bigr", "boldsymbol"},
+        "booktabs": {"toprule", "midrule", "bottomrule", "cmidrule", "addlinespace"},
+        "graphicx": {"includegraphics", "resizebox", "scalebox"},
+        "url": {"url"},
+        "hyperref": {"href"},
+    }
+    loaded = set(re.findall(r"\\usepackage(?:\[[^\]]*\])?\{([^}]+)\}", tex))
+    loaded = {p.strip() for group in loaded for p in group.split(",")}
+    for pkg, macros in needs.items():
+        if pkg in loaded:
+            continue
+        hits = sorted(m for m in macros if re.search(rf"\\{m}\b", tex))
+        if hits:
+            problems.append(f"{hits} require \\usepackage{{{pkg}}}, which is not loaded")
+
     # ---- macros --------------------------------------------------------------
     # Strip constructs that look like macros to a naive scan but are not:
     #   \_  \&  \%  \$  \#   escaped literals, whose following word is ordinary text

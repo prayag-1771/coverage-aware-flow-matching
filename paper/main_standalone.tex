@@ -1,3 +1,7 @@
+% GENERATED FILE -- do not edit.
+% Produced by experiments/17_paper_tables.py from paper/main.tex with every
+% \input expanded in place. Edit main.tex instead and regenerate.
+% Upload this file plus references.bib to Overleaf.
 %==============================================================================
 % Flow-Matching Augmentation for Rare Attack Detection in NIDS
 % Introduction section draft.
@@ -741,10 +745,97 @@ eight privilege-escalation attempts pass undetected. Tables~\ref{tab:full_nslkdd
 \ref{tab:full_unsw} and~\ref{tab:full_cicids} give the complete per-class results
 for all eight arms.
 
-\input{tables/tab_improvements}
-\input{tables/tab_full_nslkdd}
-\input{tables/tab_full_unsw}
-\input{tables/tab_full_cicids}
+% ---- inlined from tables/tab_improvements.tex ----
+\begin{table*}[t]
+\centering
+\caption{Rare-class detection improvements from generative augmentation. Baseline is the identical pipeline with no augmentation. Gains are means over five seeds with 95\% bootstrap confidence intervals excluding zero; $p$-values are Holm--Bonferroni corrected within each (dataset, class) family. $^{*}p<0.05$, $^{**}p<0.01$, $^{***}p<0.001$.}
+\label{tab:improvements}
+\begin{tabular}{lllrrrrr}
+\toprule
+Dataset & Class & Method & Baseline & Augmented & Gain & Rel. & Cohen's $d$ \\
+\midrule
+NSL-KDD & u2r & Diffusion & 0.2193 & \textbf{0.4070} & \textbf{+0.1878}$^{**}$ & +85.6\% & 4.68 \\
+ & u2r & Flow matching & 0.2193 & \textbf{0.3869} & \textbf{+0.1677}$^{***}$ & +76.5\% & 8.23 \\
+ & r2l & Diffusion & 0.1923 & \textbf{0.2893} & \textbf{+0.0971}$^{**}$ & +50.5\% & 4.55 \\
+ & r2l & Per-type flow & 0.1923 & \textbf{0.2634} & \textbf{+0.0712}$^{*}$ & +37.0\% & 2.44 \\
+ & u2r & Per-type flow & 0.2193 & \textbf{0.2784} & \textbf{+0.0591}$^{**}$ & +27.0\% & 3.92 \\
+ & r2l & Flow matching & 0.1923 & \textbf{0.2382} & \textbf{+0.0459} & +23.9\% & 1.46 \\
+\midrule
+UNSW-NB15 & Shellcode & CTGAN & 0.4954 & \textbf{0.5402} & \textbf{+0.0449}$^{*}$ & +9.1\% & 2.45 \\
+ & Backdoor & Per-type flow & 0.0681 & \textbf{0.1123} & \textbf{+0.0442} & +64.9\% & 1.53 \\
+ & Backdoor & Flow matching & 0.0681 & \textbf{0.1121} & \textbf{+0.0440} & +64.6\% & 1.83 \\
+ & Worms & Flow matching & 0.5142 & \textbf{0.5561} & \textbf{+0.0419} & +8.2\% & 0.90 \\
+ & Shellcode & Diffusion & 0.4954 & \textbf{0.5172} & \textbf{+0.0218} & +4.4\% & 1.07 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+% ---- end inline ----
+% ---- inlined from tables/tab_full_nslkdd.tex ----
+\begin{table}[t]
+\centering
+\caption{Per-class F1 on NSL-KDD, mean $\pm$ standard deviation over five seeds. Best result per class in bold.}
+\label{tab:full_nslkdd}
+\begin{tabular}{lrr}
+\toprule
+Method & r2l & u2r \\
+\midrule
+None & 0.192\,\tiny{$\pm$0.025} & 0.219\,\tiny{$\pm$0.018} \\
+Random oversample & 0.192\,\tiny{$\pm$0.040} & 0.355\,\tiny{$\pm$0.026} \\
+SMOTE & 0.246\,\tiny{$\pm$0.010} & \textbf{0.428\,\tiny{$\pm$0.026}} \\
+ADASYN & 0.251\,\tiny{$\pm$0.015} & 0.331\,\tiny{$\pm$0.036} \\
+\midrule
+CTGAN & 0.211\,\tiny{$\pm$0.018} & 0.182\,\tiny{$\pm$0.020} \\
+Diffusion & \textbf{0.289\,\tiny{$\pm$0.017}} & 0.407\,\tiny{$\pm$0.034} \\
+Flow matching & 0.238\,\tiny{$\pm$0.027} & 0.387\,\tiny{$\pm$0.021} \\
+Per-type flow & 0.263\,\tiny{$\pm$0.029} & 0.278\,\tiny{$\pm$0.022} \\
+\bottomrule
+\end{tabular}
+\end{table}
+% ---- end inline ----
+% ---- inlined from tables/tab_full_unsw.tex ----
+\begin{table}[t]
+\centering
+\caption{Per-class F1 on UNSW-NB15, mean $\pm$ standard deviation over five seeds. Best result per class in bold.}
+\label{tab:full_unsw}
+\begin{tabular}{lrrrr}
+\toprule
+Method & Analysis & Backdoor & Shellcode & Worms \\
+\midrule
+None & 0.045\,\tiny{$\pm$0.022} & 0.068\,\tiny{$\pm$0.016} & 0.495\,\tiny{$\pm$0.019} & 0.514\,\tiny{$\pm$0.049} \\
+Random oversample & 0.071\,\tiny{$\pm$0.032} & 0.104\,\tiny{$\pm$0.015} & 0.422\,\tiny{$\pm$0.007} & \textbf{0.720\,\tiny{$\pm$0.027}} \\
+SMOTE & 0.049\,\tiny{$\pm$0.009} & 0.078\,\tiny{$\pm$0.006} & 0.357\,\tiny{$\pm$0.007} & 0.382\,\tiny{$\pm$0.013} \\
+ADASYN & \textbf{0.074\,\tiny{$\pm$0.011}} & 0.071\,\tiny{$\pm$0.011} & 0.352\,\tiny{$\pm$0.006} & 0.412\,\tiny{$\pm$0.019} \\
+\midrule
+CTGAN & 0.051\,\tiny{$\pm$0.005} & 0.057\,\tiny{$\pm$0.012} & \textbf{0.540\,\tiny{$\pm$0.005}} & 0.533\,\tiny{$\pm$0.056} \\
+Diffusion & 0.009\,\tiny{$\pm$0.009} & 0.065\,\tiny{$\pm$0.017} & 0.517\,\tiny{$\pm$0.003} & 0.493\,\tiny{$\pm$0.050} \\
+Flow matching & 0.000\,\tiny{$\pm$0.000} & 0.112\,\tiny{$\pm$0.029} & 0.507\,\tiny{$\pm$0.014} & 0.556\,\tiny{$\pm$0.045} \\
+Per-type flow & 0.000\,\tiny{$\pm$0.000} & \textbf{0.112\,\tiny{$\pm$0.027}} & 0.513\,\tiny{$\pm$0.008} & 0.549\,\tiny{$\pm$0.063} \\
+\bottomrule
+\end{tabular}
+\end{table}
+% ---- end inline ----
+% ---- inlined from tables/tab_full_cicids.tex ----
+\begin{table}[t]
+\centering
+\caption{Per-class F1 on CICIDS2017, mean $\pm$ standard deviation over five seeds. Best result per class in bold.}
+\label{tab:full_cicids}
+\begin{tabular}{lrrr}
+\toprule
+Method & Bot & WebAttack & BruteForce \\
+\midrule
+None & 0.657\,\tiny{$\pm$0.368} & 0.788\,\tiny{$\pm$0.440} & 0.800\,\tiny{$\pm$0.447} \\
+Random oversample & 0.817\,\tiny{$\pm$0.006} & \textbf{0.992\,\tiny{$\pm$0.001}} & \textbf{1.000\,\tiny{$\pm$0.000}} \\
+SMOTE & 0.783\,\tiny{$\pm$0.002} & 0.987\,\tiny{$\pm$0.001} & 1.000\,\tiny{$\pm$0.000} \\
+ADASYN & 0.781\,\tiny{$\pm$0.001} & 0.983\,\tiny{$\pm$0.001} & 1.000\,\tiny{$\pm$0.000} \\
+\midrule
+CTGAN & 0.743\,\tiny{$\pm$0.117} & 0.938\,\tiny{$\pm$0.082} & 0.999\,\tiny{$\pm$0.000} \\
+Diffusion & 0.789\,\tiny{$\pm$0.093} & 0.941\,\tiny{$\pm$0.042} & 0.999\,\tiny{$\pm$0.000} \\
+Flow matching & \textbf{0.825\,\tiny{$\pm$0.003}} & 0.965\,\tiny{$\pm$0.018} & 0.978\,\tiny{$\pm$0.049} \\
+Per-type flow & 0.791\,\tiny{$\pm$0.080} & 0.983\,\tiny{$\pm$0.006} & 1.000\,\tiny{$\pm$0.000} \\
+\bottomrule
+\end{tabular}
+\end{table}
+% ---- end inline ----
 
 \subsection{Coverage determines where per-type generation wins}\label{sec:res:pertype}
 
@@ -766,7 +857,21 @@ U2R, one of four types clears the threshold, covering $58\%$ of the class; per-t
 generation loses to the best classical resampler by $0.150$. Same code, same
 hyperparameters, same dataset, opposite outcomes, ordered by coverage.
 
-\input{tables/tab_coverage}
+% ---- inlined from tables/tab_coverage.tex ----
+\begin{table}[t]
+\centering
+\caption{Sub-class coverage predicts where per-type generation helps. Coverage is the share of a class's training records belonging to an attack type with enough samples to be modelled ($\geq 20$). The class with $97\%$ coverage is won by per-type generation; the class with $58\%$ coverage is lost to classical resampling. NSL-KDD, five seeds.}
+\label{tab:coverage}
+\begin{tabular}{lrrrrr}
+\toprule
+Class & Types & Coverage & Per-type & Best classical & $\Delta$ \\
+\midrule
+R2L & 3/8 & \textbf{97\%} & 0.2634 & 0.2505 & \textbf{+0.0129} \\
+U2R & 1/4 & {58\%} & 0.2784 & 0.4279 & {-0.1496} \\
+\bottomrule
+\end{tabular}
+\end{table}
+% ---- end inline ----
 
 UNSW-NB15 provides the control. It carries no labels beneath its category field, so
 every class has coverage of unity by construction and per-type generation reduces
@@ -789,7 +894,32 @@ question is whether a learned generator beats the classical resamplers a practit
 would otherwise reach for. Table~\ref{tab:headtohead} answers it for every rare
 class.
 
-\input{tables/tab_headtohead}
+% ---- inlined from tables/tab_headtohead.tex ----
+\begin{table}[t]
+\centering
+\caption{Best generative arm against best classical arm on every rare class, by median over five seeds. The generative family leads on four of nine classes. Medians rather than means: roughly one learned-generator run in five collapses, and a single such seed inverts an arm's mean.}
+\label{tab:headtohead}
+\begin{tabular}{llrrr}
+\toprule
+Dataset & Class & Generative & Classical & $\Delta$ \\
+\midrule
+NSL-KDD & r2l & 0.2835 & 0.2474 & \textbf{+0.0361} \\
+ & u2r & 0.3962 & 0.4375 & -0.0413 \\
+\midrule
+UNSW-NB15 & Analysis & 0.0506 & 0.0734 & -0.0228 \\
+ & Backdoor & 0.1138 & 0.1065 & \textbf{+0.0073} \\
+ & Shellcode & 0.5383 & 0.4241 & \textbf{+0.1142} \\
+ & Worms & 0.5600 & 0.7191 & -0.1591 \\
+\midrule
+CICIDS2017 & Bot & 0.8303 & 0.8174 & \textbf{+0.0129} \\
+ & WebAttack & 0.9855 & 0.9917 & -0.0062 \\
+ & BruteForce & 0.9995 & 0.9998 & -0.0003 \\
+\midrule
+\multicolumn{5}{l}{Generative family leads on 4 of 9 classes.} \\
+\bottomrule
+\end{tabular}
+\end{table}
+% ---- end inline ----
 
 The generative family leads on four of nine classes and trails on five. The margins
 are asymmetric: where it leads on Shellcode it does so by $0.114$, and where it
@@ -864,7 +994,28 @@ in diffusion, obtained without loss of accuracy. Similarly, lifting minority cla
 to a quarter of the majority count matches full rebalancing to within $0.004$ F1 on
 half the training rows.
 
-\input{tables/tab_efficiency}
+% ---- inlined from tables/tab_efficiency.tex ----
+\begin{table}[t]
+\centering
+\caption{Both standard settings can be reduced without loss. Integration steps determine generation cost exactly: sampling requires one network evaluation per step, so ten steps is $100\times$ cheaper than the 1000-step schedule standard in diffusion. NSL-KDD, three seeds.}
+\label{tab:efficiency}
+\begin{tabular}{lrrr}
+\toprule
+Setting & R2L F1 & U2R F1 & Cost \\
+\midrule
+\multicolumn{4}{l}{\emph{Integration steps}} \\
+\quad 10 steps & \textbf{0.3179} & \textbf{0.4517} & 10 evals/sample \\
+\quad 50 steps & {0.3018} & {0.4385} & 50 evals/sample \\
+\quad 100 steps & {0.3028} & {0.4479} & 100 evals/sample \\
+\midrule
+\multicolumn{4}{l}{\emph{Synthetic data volume}} \\
+\quad 25\% parity & \textbf{0.3046} & \textbf{0.4337} & 163,775 rows \\
+\quad 50\% parity & {0.3070} & {0.4323} & 214,283 rows \\
+\quad 100\% parity & {0.3032} & {0.4241} & 336,715 rows \\
+\bottomrule
+\end{tabular}
+\end{table}
+% ---- end inline ----
 
 \subsection{Where augmentation degrades detection}\label{sec:res:harms}
 
@@ -903,7 +1054,23 @@ the classifier it will be deployed with, and that comparisons drawn from a singl
 classifier should not be generalised. Section~\ref{sec:discussion} examines why the
 two families respond differently.
 
-\input{tables/tab_robustness}
+% ---- inlined from tables/tab_robustness.tex ----
+\begin{table}[t]
+\centering
+\caption{Transfer of statistically solid effects across classifier families. Each cell counts effects whose 95\% bootstrap CI excludes zero under the gradient-boosted tree, and how many reproduce with the same sign under a neural classifier trained on identical data.}
+\label{tab:robustness}
+\begin{tabular}{lrrr}
+\toprule
+Method family & XGBoost & Reproduced & Rate \\
+\midrule
+Classical resampling & 18 & 14 & 78\% \\
+Generative & 17 & 2 & 12\% \\
+\midrule
+All & 35 & 16 & 46\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+% ---- end inline ----
 
 \section{Discussion}\label{sec:discussion}
 
