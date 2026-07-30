@@ -51,6 +51,7 @@ KNOWN = {
     "kappa", "eta", "zeta", "iota", "nu", "xi", "chi", "upsilon", "varepsilon",
     "Gamma", "Lambda", "Phi", "Psi", "Theta",
     "columnwidth", "textwidth", "linewidth", "textheight", "hsize",
+    "today", "IEEEauthorblockN", "IEEEauthorblockA",
 }
 
 
@@ -89,7 +90,9 @@ def main() -> int:
     #   x_i  \sum_  a^2      sub/superscripts, which capture the following word
     # `\\` is a line break, not the start of a macro: in `\\Rare-Attack` a naive scan
     # reads the second backslash plus the following word and reports "Rare".
-    scan = re.sub(r"\\\\", " ", tex)
+    # Comments first: prose in a % comment naming a macro is not a use of it.
+    scan = re.sub(r"(?<!\\)%.*", "", tex)
+    scan = re.sub(r"\\\\", " ", scan)
     scan = re.sub(r"\\[_&%$#{}]", " ", scan)
     scan = re.sub(r"[_^]\{?\w+\}?", " ", scan)
 
@@ -127,6 +130,33 @@ def main() -> int:
     dangling = sorted(refs - labels)
     if dangling:
         problems.append(f"\\ref with no \\label: {dangling}")
+
+    # ---- every float and equation must be referred to in the text -------------
+    # A figure or table that no sentence points at is one the typesetter is free to
+    # place anywhere and the reader has no reason to look at. LaTeX does not warn
+    # about it: an unreferenced float compiles silently and drifts to the end of the
+    # section. Equations are the same -- a numbered equation nothing cites is
+    # decoration.
+    body = tex
+    for tab in sorted((ROOT / "paper" / "tables").glob("*.tex")):
+        body += tab.read_text(encoding="utf-8")
+
+    kinds = {"fig:": "figure", "tab:": "table", "eq:": "equation"}
+    for prefix, kind in kinds.items():
+        declared = {l for l in re.findall(r"\\label\{([^}]+)\}", body)
+                    if l.startswith(prefix)}
+        used = set(re.findall(r"\\(?:eq)?ref\{([^}]+)\}", tex))
+        orphans = sorted(declared - used)
+        if orphans:
+            problems.append(f"{kind}(s) declared but never referenced: {orphans}")
+
+    # ---- figure files must exist, under the exact names used ------------------
+    for target in re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}", tex):
+        stem = ROOT / "paper" / target
+        found = [p for p in (stem.with_suffix(".pdf"), stem.with_suffix(".png"),
+                             stem) if p.exists()]
+        if not found:
+            problems.append(f"figure file missing for \\includegraphics{{{target}}}")
 
     # ---- inputs --------------------------------------------------------------
     for target in re.findall(r"\\input\{([^}]+)\}", tex):

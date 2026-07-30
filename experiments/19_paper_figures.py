@@ -375,6 +375,7 @@ def main():
         "figure.facecolor": "white", "savefig.facecolor": "white",
     })
     print("\nManuscript figures:")
+    fig_pipeline()
     fig_effects()
     fig_coverage()
     fig_head_to_head()
@@ -383,6 +384,69 @@ def main():
     fig_stability()
     fig_ablations()
     print(f"\nSaved to {FIGDIR.relative_to(ROOT)}  (PDF for the manuscript, PNG to view)")
+
+
+
+
+# --- fig 0: pipeline -----------------------------------------------------------
+
+def fig_pipeline():
+    """Orientation diagram for the method section.
+
+    Drawn rather than described because the two things a reader most often gets wrong
+    about an augmentation study are visible only in the wiring: that synthetic records
+    enter the training partition alone, and that every transform is fitted before they
+    are added. Both are stated in prose in Section III-F; a diagram makes them
+    checkable at a glance.
+    """
+    from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+
+    fig, ax = plt.subplots(figsize=(COL2, 2.45))
+    ax.set_xlim(0, 100); ax.set_ylim(0, 34); ax.axis("off")
+
+    def box(x, y, w, h, text, fc="white", ec=AXIS, tc=INK, bold=False, fs=7.2):
+        ax.add_patch(FancyBboxPatch(
+            (x, y), w, h, boxstyle="round,pad=0.9,rounding_size=1.4",
+            facecolor=fc, edgecolor=ec, linewidth=1.0, zorder=2))
+        ax.text(x + w / 2, y + h / 2, text, ha="center", va="center",
+                fontsize=fs, color=tc, zorder=3,
+                fontweight="bold" if bold else "normal", linespacing=1.45)
+
+    def arrow(x1, y1, x2, y2, colour=MUTED, style="-|>"):
+        ax.add_patch(FancyArrowPatch(
+            (x1, y1), (x2, y2), arrowstyle=style, mutation_scale=9,
+            color=colour, linewidth=1.0, zorder=1,
+            shrinkA=1, shrinkB=1))
+
+    box(1, 13, 14, 8, "Raw flow\nrecords", fc="#f4f3ef")
+    arrow(15.6, 17, 20.4, 17)
+    box(21, 13, 15, 8, "Stratified\nsplit", fc="#f4f3ef")
+
+    # Test path -- deliberately drawn as a separate lane that no synthetic record joins.
+    arrow(36.6, 19.5, 86, 27.5)
+    box(86, 24, 13, 7, "Test", fc="#f4f3ef")
+
+    arrow(36.6, 15, 41.4, 12)
+    box(42, 7, 17, 9,
+        "Augment\n(one of 8 arms)\ntrain only", fc="#e8f1fd", ec=POS, bold=True)
+
+    # Plain arrow glyph, not mathtext: a shell heredoc mangled the backslash of
+    # \rightarrow into a carriage return, leaving matplotlib to parse "$ightarrow$".
+    ax.text(50.5, 3.4,
+            "type inference  →  per-type generation  →  sample",
+            ha="center", fontsize=6.3, color=INK2, style="italic")
+
+    arrow(59.6, 11.5, 64.4, 11.5)
+    box(65, 7, 15, 9, "Fit encoder\n+ scaler\non train", fc="white")
+    arrow(80.6, 11.5, 85.4, 13.5)
+    box(86, 9, 13, 7, "Classifier\n(XGB / MLP)", fc="white", bold=True)
+
+    arrow(92.5, 16.3, 92.5, 23.6, colour=INK)
+    ax.text(93.6, 20, "evaluate", fontsize=6.3, color=INK2, va="center")
+
+    # The leakage statement belongs in the LaTeX caption, not inside the axes: set
+    # here it collided with the Test box and duplicated the caption text.
+    save(fig, "fig0_pipeline")
 
 
 if __name__ == "__main__":

@@ -62,8 +62,27 @@
 
 \title{Coverage-Aware Flow Matching for\\Rare-Attack Detection}
 
-\author{Prayag Sharma% <-- confirm preferred form of name and affiliation
-\thanks{Manuscript draft.}}
+% Author block.
+%
+% The blocks supplied used \IEEEauthorblockN / \IEEEauthorblockA / \and, which are
+% IEEEtran's *conference* interface. This document is \documentclass[journal], where
+% authors are given as a single \author with affiliations in \thanks notes; mixing
+% the two produces a conference-style byline in a journal layout. Names, emails and
+% affiliations are reproduced exactly as supplied.
+%
+% The ordinals were "1st" and "5th"; with two authors that reads as a paste artefact
+% from a five-author template, so they are 1st and 2nd here. Restore them if the
+% author list is going to grow.
+%
+% If this is submitted to IEEE Access, swap \documentclass to ieeeaccess.cls and the
+% byline changes again -- Access uses \IEEEauthorblockN with member grades.
+\author{Prayag~Sharma and Ravi~Tiwari%
+\thanks{P. Sharma is with the School of Computer Science and Engineering, Vellore
+Institute of Technology, Chennai, India (e-mail:
+prayag.sharma2024@vitstudent.ac.in).}%
+\thanks{R. Tiwari is with the School of Electronics Engineering, Vellore Institute
+of Technology, Chennai, India (e-mail: ravi.tiwari@vit.ac.in).}%
+\thanks{Manuscript prepared \today.}}
 
 \maketitle
 
@@ -400,6 +419,18 @@ relationship with achievable augmentation gain once that difficulty is accounted
 \section{Method}\label{sec:method}
 %==============================================================================
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig0_pipeline}
+\caption{The evaluation pipeline. Only the augmentation stage differs between the
+eight arms compared in this study; splits, encoding, classifier and metrics are
+identical throughout. Two properties are enforced by construction and are visible
+in the wiring: synthetic records enter the training partition only and never reach
+the test partition, and every transform---the one-hot encoder, the scaler and the
+column-type inference---is fitted after augmentation on training data alone.}
+\label{fig:pipeline}
+\end{figure*}
+
 \subsection{Problem setting}
 
 Let $\mathcal{D}=\{(x_i,y_i)\}_{i=1}^{N}$ be a labelled set of network flow records,
@@ -409,7 +440,8 @@ $n_c = |\{i : y_i = c\}|$ are severely unequal: on NSL-KDD the U2R category hold
 \utwrTrain{} training records against \numnormal{} benign ones, a ratio of
 \utwrRatio{}.
 
-An augmentation arm is a map $\mathcal{A}$ that takes the training partition and
+Figure~\ref{fig:pipeline} shows the pipeline these arms sit inside. An
+augmentation arm is a map $\mathcal{A}$ that takes the training partition and
 returns an enlarged one,
 \begin{equation}
 \mathcal{A} : \mathcal{D}_{\text{train}} \;\longmapsto\;
@@ -489,7 +521,8 @@ otherwise have no reference for what convergence looks like here.
 \subsection{Type-aware encoding}\label{sec:method:encoding}
 
 Flow matching as stated above treats $\mathcal{X}$ as a Euclidean space. Network
-flow records are not one. Of NSL-KDD's 38 nominally numeric columns, six are binary
+flow records are not one. Table~\ref{tab:feattypes} audits this. Of NSL-KDD's 38 nominally numeric columns,
+six are binary
 flags such as \texttt{land} and \texttt{root\_shell}, six are low-cardinality counts
 such as \texttt{num\_shells}, and eleven are unbounded integer counts; only fifteen
 are genuinely continuous. Transported as continuous coordinates, these fields
@@ -602,7 +635,9 @@ silently discard exactly the rare attacks under study.
 
 \subsection{Datasets}
 
-Three benchmarks are used, chosen to match those of the work this study takes as its
+Three benchmarks are used, summarised in Table~
+\ref{tab:datasets} and chosen to
+match those of the work this study takes as its
 reference point~\cite{alsubaei2025smart} and to span three decades of network
 telemetry.
 
@@ -669,7 +704,8 @@ reported standard deviation is exactly zero, which measures nothing.
 normalisation, ReLU and dropout $0.2$; AdamW at $10^{-3}$; early stopping on a $5\%$
 split held out from the \emph{training} partition, never from test.
 
-Neither classifier is tuned per arm. A per-arm search would confound the
+Table~
+\ref{tab:hyper} lists every setting. Table~\ref{tab:hyper} lists every setting used. Neither classifier is tuned per arm. A per-arm search would confound the
 augmentation effect with the effort spent tuning each arm, which is the most common
 way this comparison is gotten wrong. Neither uses class weighting, so that any
 difference between them is attributable to the model family rather than to two
@@ -738,7 +774,8 @@ applied to the training partition only.
 \subsection{Rare-class detection improves substantially}\label{sec:res:main}
 
 Table~\ref{tab:improvements} reports every improvement whose 95\% bootstrap
-confidence interval excludes zero. Generative augmentation yields eleven such
+confidence interval excludes zero; Fig.~\ref{fig:effects} places them alongside
+every degradation on a single axis. Generative augmentation yields eleven such
 improvements across the two datasets whose rare classes are represented in both
 splits, six of them surviving Holm--Bonferroni correction at $p<0.05$.
 
@@ -785,7 +822,7 @@ shows it does not predict utility. The interesting part is that the benefit of
 per-type generation is \emph{predictable in advance}, from a quantity computable
 before any generator is fitted.
 
-Table~\ref{tab:coverage} states it. On R2L, three of eight attack types clear the
+Table~\ref{tab:coverage} and Fig.~\ref{fig:coverage} state it. On R2L, three of eight attack types clear the
 minimum sample count, and those three account for $97\%$ of the class's training
 records; per-type generation beats the best classical resampler by $0.013$~F1. On
 U2R, one of four types clears the threshold, covering $58\%$ of the class; per-type
@@ -820,7 +857,8 @@ mechanism, not a calibrated cut-off.
 
 Section~\ref{sec:res:main} compares each method against no augmentation. The stricter
 question is whether a learned generator beats the classical resamplers a practitioner
-would otherwise reach for. Table~\ref{tab:headtohead} answers it for every rare
+would otherwise reach for. Table~\ref{tab:headtohead}, plotted in
+Fig.~\ref{fig:headtohead}, answers it for every rare
 class.
 
 \input{tables/tab_headtohead}
@@ -872,7 +910,8 @@ mean nearest-neighbour distances between synthetic and real records; the median
 Kolmogorov--Smirnov statistic across marginal distributions; and the $L_1$ distance
 between SHAP attribution profiles~\cite{lundberg2017unified} of augmented and
 unaugmented classifiers. None orders the eight methods as downstream rare-class F1
-does.
+does; Fig.~
+\ref{fig:quality} shows the attribution measure against F1 directly.
 
 The clearest single case involves the two classical resamplers. ADASYN's synthetic
 U2R records are identified as synthetic on every attempt --- detection AUC
@@ -905,7 +944,8 @@ cannot support a recommendation about utility.
 
 \subsection{Both standard settings can be reduced}\label{sec:res:efficiency}
 
-Table~\ref{tab:efficiency} reports two ablations on choices that are conventional
+Table~\ref{tab:efficiency} and Fig.~\ref{fig:ablations} report two ablations on
+choices that are conventional
 rather than justified. Accuracy is flat across ten, fifty and one hundred
 integration steps, with ten marginally best on both rare classes. Because sampling
 requires exactly one network evaluation per integration step, this is a
@@ -947,7 +987,8 @@ tree and a neural network~\cite{alsubaei2025smart}, we repeat the entire study w
 neural classifier --- identical splits, seeds, augmentation and preprocessing, with
 only the model family changed --- and ask which effects reproduce.
 
-Table~\ref{tab:robustness} reports the result. Effects attributable to classical
+Table~\ref{tab:robustness} reports the result, and Fig.~\ref{fig:cross} shows
+every effect measured under both classifiers on one pair of axes. Effects attributable to classical
 resampling transfer well: 14 of 18 reproduce with the same sign. Effects attributable
 to generative augmentation transfer poorly, with 2 of 17 reproducing. Across all nine
 rare classes, the two classifiers select a different best-performing arm.
@@ -1058,7 +1099,8 @@ error is raised. No interpolation method fails on any seed. The separation is
 complete: three of three learned generators, zero of four classical methods.
 
 The gap between an arm's mean and its median is the cleanest single indicator we
-found: approximately $0.000$ for every classical arm, and $-0.032$ to $-0.042$ for
+found (Fig.~
+\ref{fig:stability}): approximately $0.000$ for every classical arm, and $-0.032$ to $-0.042$ for
 every learned one. Reported by median, all three learned generators beat the
 unaugmented baseline on this class; reported by mean, all three lose to it. Both
 statements are true and they answer different questions --- what the method delivers
