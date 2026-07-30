@@ -164,6 +164,36 @@ def main() -> int:
         if not path.exists():
             problems.append(f"\\input target missing: {path.relative_to(ROOT)}")
 
+    # ---- the standalone build must not be stale -------------------------------
+    # main_standalone.tex is what gets uploaded, and it is derived from main.tex by
+    # expanding every \input. Editing main.tex without regenerating leaves the
+    # uploaded file silently behind -- the manuscript would compile perfectly and be
+    # the wrong version. Compared by content rather than by timestamp, since a
+    # checkout or a copy resets mtimes.
+    standalone = ROOT / "paper" / "main_standalone.tex"
+    if standalone.exists():
+        expected = []
+        for line in tex.splitlines():
+            if line.strip().startswith(r"\input{"):
+                target = line.strip()[len(r"\input{"):].rstrip("}")
+                path = ROOT / "paper" / (
+                    target if target.endswith(".tex") else target + ".tex")
+                if path.exists():
+                    expected.append(path.read_text(encoding="utf-8").rstrip())
+                    continue
+            expected.append(line)
+        have = standalone.read_text(encoding="utf-8")
+        # Compare only substantive lines: the generated file carries a header and
+        # inline markers that main.tex does not.
+        norm = lambda t: [l.strip() for l in t.splitlines()
+                          if l.strip() and not l.strip().startswith("%")]
+        if norm("\n".join(expected)) != norm(have):
+            problems.append(
+                "paper/main_standalone.tex is STALE -- rerun "
+                "experiments/17_paper_tables.py before uploading")
+        else:
+            print("  main_standalone.tex is current")
+
     # ---- braces and math -----------------------------------------------------
     stripped = re.sub(r"(?<!\\)%.*", "", tex)
     if stripped.count("{") != stripped.count("}"):
