@@ -1,0 +1,20 @@
+\begin{table}[t]
+\centering
+\caption{Per-class F1 on NSL-KDD, mean $\pm$ standard deviation over five seeds. Best result per class in bold.}
+\label{tab:full_nslkdd}
+\begin{tabular}{lrr}
+\toprule
+Method & r2l & u2r \\
+\midrule
+None & 0.192\,\tiny{$\pm$0.025} & 0.219\,\tiny{$\pm$0.018} \\
+Random oversample & 0.192\,\tiny{$\pm$0.040} & 0.355\,\tiny{$\pm$0.026} \\
+SMOTE & 0.246\,\tiny{$\pm$0.010} & \textbf{0.428\,\tiny{$\pm$0.026}} \\
+ADASYN & 0.251\,\tiny{$\pm$0.015} & 0.331\,\tiny{$\pm$0.036} \\
+\midrule
+CTGAN & 0.211\,\tiny{$\pm$0.018} & 0.182\,\tiny{$\pm$0.020} \\
+Diffusion & \textbf{0.289\,\tiny{$\pm$0.017}} & 0.407\,\tiny{$\pm$0.034} \\
+Flow matching & 0.238\,\tiny{$\pm$0.027} & 0.387\,\tiny{$\pm$0.021} \\
+Per-type flow & 0.263\,\tiny{$\pm$0.029} & 0.278\,\tiny{$\pm$0.022} \\
+\bottomrule
+\end{tabular}
+\end{table}

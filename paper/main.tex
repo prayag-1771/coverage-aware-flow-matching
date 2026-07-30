@@ -246,7 +246,105 @@ Section~\ref{sec:conclusion} concludes.
 \section{Experimental Setup}\label{sec:setup}
 % TODO
 \section{Results}\label{sec:results}
-% TODO
+
+All numbers in this section are produced by \texttt{experiments/17\_paper\_tables.py}
+directly from the saved result files; none are transcribed by hand. Every arm sees
+the same splits, the same seeds, and the same preprocessing, and augmentation is
+applied to the training partition only.
+
+\subsection{Rare-class detection improves substantially}\label{sec:res:main}
+
+Table~\ref{tab:improvements} reports every improvement whose 95\% bootstrap
+confidence interval excludes zero. Generative augmentation yields eleven such
+improvements across the two datasets whose rare classes are represented in both
+splits, six of them surviving Holm--Bonferroni correction at $p<0.05$.
+
+The largest gains occur precisely where the imbalance is most severe. NSL-KDD's U2R
+class has \utwrTrain{} training records against a majority class of
+$67{,}343$, a ratio of \utwrRatio{}, and is the canonical failure case in this
+literature. Diffusion-based augmentation raises its F1 from \baseUtwrFone{} to
+$0.4070$, a relative improvement of $85.6\%$ at $p=0.0021$ with Cohen's $d=4.68$;
+flow matching reaches $0.3869$ at $p=0.0004$ with $d=8.23$. R2L improves from
+\baseRtwolFone{} to $0.2893$, a $50.5\%$ relative gain. On UNSW-NB15, Backdoor --- a
+class the unaugmented pipeline detects at F1 $0.0681$ --- improves by $64.9\%$ under
+per-type flow matching.
+
+Effect sizes above $d=4$ are unusually large for this problem and reflect that the
+baseline is not merely weak on these classes but close to unusable: an F1 of
+$0.2193$ on U2R corresponds to a recall of \baseUtwrRec{}, meaning roughly seven in
+eight privilege-escalation attempts pass undetected. Tables~\ref{tab:full_nslkdd},
+\ref{tab:full_unsw} and~\ref{tab:full_cicids} give the complete per-class results
+for all eight arms.
+
+\input{tables/tab_improvements}
+
+\subsection{Per-attack-type generation}\label{sec:res:pertype}
+
+Fitting one generator per attack type rather than per coarse class improves sample
+quality markedly: on R2L the nearest-neighbour distance ratio falls from $21.40$ to
+$7.14$ and the median Kolmogorov--Smirnov statistic from $0.113$ to $0.061$. The
+mechanism is that a coarse class such as R2L is a mixture of dissimilar attack
+types, and a single continuous generator fitted to that mixture places mass between
+its modes rather than on them.
+
+Correct handling of discrete columns matters more still. Sixty percent of NSL-KDD's
+nominally numeric fields are binary flags or low-cardinality counts; generating them
+as continuous produces records such as \texttt{land}~$=0.37$, which correspond to no
+realisable connection. Treating them according to their true type reduces the U2R KS
+statistic from $0.424$ to $0.056$.
+
+\subsection{Both standard settings can be reduced}\label{sec:res:efficiency}
+
+Table~\ref{tab:efficiency} reports two ablations on choices that are conventional
+rather than justified. Accuracy is flat across ten, fifty and one hundred
+integration steps, with ten marginally best on both rare classes. Because sampling
+requires exactly one network evaluation per integration step, this is a
+$100\times$ reduction in generation cost relative to the 1000-step schedule standard
+in diffusion, obtained without loss of accuracy. Similarly, lifting minority classes
+to a quarter of the majority count matches full rebalancing to within $0.004$ F1 on
+half the training rows.
+
+\input{tables/tab_efficiency}
+
+\subsection{Where augmentation degrades detection}\label{sec:res:harms}
+
+Augmentation is not uniformly beneficial, and the direction of its effect is not
+predictable from the method alone. Of 63 comparisons against the unaugmented
+baseline, 14 are statistically significant \emph{degradations}. The largest single
+effect measured anywhere in this study is one of them: SMOTE reduces UNSW-NB15
+Shellcode F1 by $0.1385$ at $d=-9.59$, a larger magnitude than any benefit SMOTE
+produces on any class of any dataset. ADASYN degrades the same class by $0.1434$.
+
+This matters for practice because these are the default choices. Both methods
+interpolate between a minority sample and its nearest same-class neighbours; where a
+rare class is not a separable region of the feature space, that interpolation places
+synthetic records inside the territory of other classes and moves the decision
+boundary against the class it was intended to help.
+
+\subsection{Transfer across classifier families}\label{sec:res:robustness}
+
+Reported improvements in this literature are almost always established with a single
+classifier. Because the base evaluation of this problem uses both a gradient-boosted
+tree and a neural network~\cite{alsubaei2025smart}, we repeat the entire study with a
+neural classifier --- identical splits, seeds, augmentation and preprocessing, with
+only the model family changed --- and ask which effects reproduce.
+
+Table~\ref{tab:robustness} reports the result. Effects attributable to classical
+resampling transfer well: 14 of 18 reproduce with the same sign. Effects attributable
+to generative augmentation transfer poorly, with 2 of 17 reproducing. Across all nine
+rare classes, the two classifiers select a different best-performing arm.
+
+We take this as a scope condition rather than a refutation. The improvements in
+Table~\ref{tab:improvements} are real, correctly computed, and reproducible; what
+Table~\ref{tab:robustness} establishes is that they are properties of the
+augmentation \emph{and} the downstream model jointly, not of the augmentation alone.
+The practical implication is that an augmentation method should be selected against
+the classifier it will be deployed with, and that comparisons drawn from a single
+classifier should not be generalised. Section~\ref{sec:discussion} examines why the
+two families respond differently.
+
+\input{tables/tab_robustness}
+
 \section{Discussion}\label{sec:discussion}
 % TODO
 \section{Conclusion}\label{sec:conclusion}

@@ -1,0 +1,20 @@
+\begin{table}[t]
+\centering
+\caption{Both standard settings can be reduced without loss. Integration steps determine generation cost exactly: sampling requires one network evaluation per step, so ten steps is $100\times$ cheaper than the 1000-step schedule standard in diffusion. NSL-KDD, three seeds.}
+\label{tab:efficiency}
+\begin{tabular}{lrrr}
+\toprule
+Setting & R2L F1 & U2R F1 & Cost \\
+\midrule
+\multicolumn{4}{l}{\emph{Integration steps}} \\
+\quad 10 steps & \textbf{0.3179} & \textbf{0.4517} & 10 evals/sample \\
+\quad 50 steps & {0.3018} & {0.4385} & 50 evals/sample \\
+\quad 100 steps & {0.3028} & {0.4479} & 100 evals/sample \\
+\midrule
+\multicolumn{4}{l}{\emph{Synthetic data volume}} \\
+\quad 25\% parity & \textbf{0.3046} & \textbf{0.4337} & 163,775 rows \\
+\quad 50\% parity & {0.3070} & {0.4323} & 214,283 rows \\
+\quad 100\% parity & {0.3032} & {0.4241} & 336,715 rows \\
+\bottomrule
+\end{tabular}
+\end{table}

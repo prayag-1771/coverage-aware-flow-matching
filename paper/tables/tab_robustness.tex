@@ -1,0 +1,15 @@
+\begin{table}[t]
+\centering
+\caption{Transfer of statistically solid effects across classifier families. Each cell counts effects whose 95\% bootstrap CI excludes zero under the gradient-boosted tree, and how many reproduce with the same sign under a neural classifier trained on identical data.}
+\label{tab:robustness}
+\begin{tabular}{lrrr}
+\toprule
+Method family & XGBoost & Reproduced & Rate \\
+\midrule
+Classical resampling & 18 & 14 & 78\% \\
+Generative & 17 & 2 & 12\% \\
+\midrule
+All & 35 & 16 & 46\% \\
+\bottomrule
+\end{tabular}
+\end{table}

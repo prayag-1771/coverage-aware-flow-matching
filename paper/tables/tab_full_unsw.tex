@@ -1,0 +1,20 @@
+\begin{table}[t]
+\centering
+\caption{Per-class F1 on UNSW-NB15, mean $\pm$ standard deviation over five seeds. Best result per class in bold.}
+\label{tab:full_unswnb15}
+\begin{tabular}{lrrrr}
+\toprule
+Method & Analysis & Backdoor & Shellcode & Worms \\
+\midrule
+None & 0.045\,\tiny{$\pm$0.022} & 0.068\,\tiny{$\pm$0.016} & 0.495\,\tiny{$\pm$0.019} & 0.514\,\tiny{$\pm$0.049} \\
+Random oversample & 0.071\,\tiny{$\pm$0.032} & 0.104\,\tiny{$\pm$0.015} & 0.422\,\tiny{$\pm$0.007} & \textbf{0.720\,\tiny{$\pm$0.027}} \\
+SMOTE & 0.049\,\tiny{$\pm$0.009} & 0.078\,\tiny{$\pm$0.006} & 0.357\,\tiny{$\pm$0.007} & 0.382\,\tiny{$\pm$0.013} \\
+ADASYN & \textbf{0.074\,\tiny{$\pm$0.011}} & 0.071\,\tiny{$\pm$0.011} & 0.352\,\tiny{$\pm$0.006} & 0.412\,\tiny{$\pm$0.019} \\
+\midrule
+CTGAN & 0.051\,\tiny{$\pm$0.005} & 0.057\,\tiny{$\pm$0.012} & \textbf{0.540\,\tiny{$\pm$0.005}} & 0.533\,\tiny{$\pm$0.056} \\
+Diffusion & 0.009\,\tiny{$\pm$0.009} & 0.065\,\tiny{$\pm$0.017} & 0.517\,\tiny{$\pm$0.003} & 0.493\,\tiny{$\pm$0.050} \\
+Flow matching & 0.000\,\tiny{$\pm$0.000} & 0.112\,\tiny{$\pm$0.029} & 0.507\,\tiny{$\pm$0.014} & 0.556\,\tiny{$\pm$0.045} \\
+Per-type flow & 0.000\,\tiny{$\pm$0.000} & \textbf{0.112\,\tiny{$\pm$0.027}} & 0.513\,\tiny{$\pm$0.008} & 0.549\,\tiny{$\pm$0.063} \\
+\bottomrule
+\end{tabular}
+\end{table}

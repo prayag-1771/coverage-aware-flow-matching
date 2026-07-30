@@ -1,0 +1,23 @@
+\begin{table*}[t]
+\centering
+\caption{Rare-class detection improvements from generative augmentation. Baseline is the identical pipeline with no augmentation. Gains are means over five seeds with 95\% bootstrap confidence intervals excluding zero; $p$-values are Holm--Bonferroni corrected within each (dataset, class) family. $^{*}p<0.05$, $^{**}p<0.01$, $^{***}p<0.001$.}
+\label{tab:improvements}
+\begin{tabular}{lllrrrrr}
+\toprule
+Dataset & Class & Method & Baseline & Augmented & Gain & Rel. & Cohen's $d$ \\
+\midrule
+NSL-KDD & u2r & Diffusion & 0.2193 & \textbf{0.4070} & \textbf{+0.1878}$^{**}$ & +85.6\% & 4.68 \\
+ & u2r & Flow matching & 0.2193 & \textbf{0.3869} & \textbf{+0.1677}$^{***}$ & +76.5\% & 8.23 \\
+ & r2l & Diffusion & 0.1923 & \textbf{0.2893} & \textbf{+0.0971}$^{**}$ & +50.5\% & 4.55 \\
+ & r2l & Per-type flow & 0.1923 & \textbf{0.2634} & \textbf{+0.0712}$^{*}$ & +37.0\% & 2.44 \\
+ & u2r & Per-type flow & 0.2193 & \textbf{0.2784} & \textbf{+0.0591}$^{**}$ & +27.0\% & 3.92 \\
+ & r2l & Flow matching & 0.1923 & \textbf{0.2382} & \textbf{+0.0459} & +23.9\% & 1.46 \\
+\midrule
+UNSW-NB15 & Shellcode & CTGAN & 0.4954 & \textbf{0.5402} & \textbf{+0.0449}$^{*}$ & +9.1\% & 2.45 \\
+ & Backdoor & Per-type flow & 0.0681 & \textbf{0.1123} & \textbf{+0.0442} & +64.9\% & 1.53 \\
+ & Backdoor & Flow matching & 0.0681 & \textbf{0.1121} & \textbf{+0.0440} & +64.6\% & 1.83 \\
+ & Worms & Flow matching & 0.5142 & \textbf{0.5561} & \textbf{+0.0419} & +8.2\% & 0.90 \\
+ & Shellcode & Diffusion & 0.4954 & \textbf{0.5172} & \textbf{+0.0218} & +4.4\% & 1.07 \\
+\bottomrule
+\end{tabular}
+\end{table*}

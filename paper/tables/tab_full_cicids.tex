@@ -1,0 +1,20 @@
+\begin{table}[t]
+\centering
+\caption{Per-class F1 on CICIDS2017, mean $\pm$ standard deviation over five seeds. Best result per class in bold.}
+\label{tab:full_cicids2017}
+\begin{tabular}{lrrr}
+\toprule
+Method & Bot & WebAttack & BruteForce \\
+\midrule
+None & 0.657\,\tiny{$\pm$0.368} & 0.788\,\tiny{$\pm$0.440} & 0.800\,\tiny{$\pm$0.447} \\
+Random oversample & 0.817\,\tiny{$\pm$0.006} & \textbf{0.992\,\tiny{$\pm$0.001}} & \textbf{1.000\,\tiny{$\pm$0.000}} \\
+SMOTE & 0.783\,\tiny{$\pm$0.002} & 0.987\,\tiny{$\pm$0.001} & 1.000\,\tiny{$\pm$0.000} \\
+ADASYN & 0.781\,\tiny{$\pm$0.001} & 0.983\,\tiny{$\pm$0.001} & 1.000\,\tiny{$\pm$0.000} \\
+\midrule
+CTGAN & 0.743\,\tiny{$\pm$0.117} & 0.938\,\tiny{$\pm$0.082} & 0.999\,\tiny{$\pm$0.000} \\
+Diffusion & 0.789\,\tiny{$\pm$0.093} & 0.941\,\tiny{$\pm$0.042} & 0.999\,\tiny{$\pm$0.000} \\
+Flow matching & \textbf{0.825\,\tiny{$\pm$0.003}} & 0.965\,\tiny{$\pm$0.018} & 0.978\,\tiny{$\pm$0.049} \\
+Per-type flow & 0.791\,\tiny{$\pm$0.080} & 0.983\,\tiny{$\pm$0.006} & 1.000\,\tiny{$\pm$0.000} \\
+\bottomrule
+\end{tabular}
+\end{table}
