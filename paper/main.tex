@@ -704,8 +704,8 @@ reported standard deviation is exactly zero, which measures nothing.
 normalisation, ReLU and dropout $0.2$; AdamW at $10^{-3}$; early stopping on a $5\%$
 split held out from the \emph{training} partition, never from test.
 
-Table~
-\ref{tab:hyper} lists every setting. Table~\ref{tab:hyper} lists every setting used. Neither classifier is tuned per arm. A per-arm search would confound the
+Table~\ref{tab:hyper} lists every setting used.
+Neither classifier is tuned per arm. A per-arm search would confound the
 augmentation effect with the effort spent tuning each arm, which is the most common
 way this comparison is gotten wrong. Neither uses class weighting, so that any
 difference between them is attributable to the model family rather than to two
@@ -885,7 +885,7 @@ statistic identifies a subset of them before any training is done.
 
 \subsection{Type-aware encoding}\label{sec:res:encoding}
 
-Sixty percent of NSL-KDD's nominally numeric fields are binary flags or
+Twenty-three of NSL-KDD's 38 nominally numeric fields are binary flags or
 low-cardinality counts; generating them as continuous produces records such as
 \texttt{land}~$=0.37$, which correspond to no realisable connection. Treating them
 according to their inferred type reduces the U2R median KS statistic from $0.424$ to

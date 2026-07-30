@@ -97,6 +97,22 @@ def table_full_comparison(dataset: str) -> str:
     arms = ["none", "random_oversample", "smote", "adasyn",
             "ctgan", "diffusion", "flowmatch", "flowmatch_pertype"]
 
+    # Drop seeds whose fit collapsed to a single predicted class. Section IV-E states
+    # that such fits are counted and reported as a failure rate rather than averaged
+    # into a mean; averaging them here contradicted that in print. On CICIDS2017 the
+    # unaugmented arm lost one seed to a total collapse, which dragged its Bot mean to
+    # 0.657 with a standard deviation of 0.368 while the text quoted 0.822.
+    sm_path = RESULTS / f"{stem}_summary.csv"
+    dropped = 0
+    if sm_path.exists():
+        sm = pd.read_csv(sm_path)
+        bad = set(zip(*sm.loc[sm["macro_f1"] < 0.20, ["arm", "seed"]].values.T)) \
+            if (sm["macro_f1"] < 0.20).any() else set()
+        if bad:
+            keep = ~pc.apply(lambda r: (r["arm"], r["seed"]) in bad, axis=1)
+            dropped = int((~keep).sum() / max(len(pc["class"].unique()), 1))
+            pc = pc[keep]
+
     piv = pc[pc["class"].isin(rare)].pivot_table(
         index="arm", columns="class", values="f1", aggfunc="mean").reindex(arms)
     sd = pc[pc["class"].isin(rare)].pivot_table(
@@ -109,7 +125,10 @@ def table_full_comparison(dataset: str) -> str:
     lines = [
         r"\begin{table}[t]", r"\centering",
         f"\\caption{{Per-class F1 on {dataset}, mean $\\pm$ standard deviation over "
-        r"five seeds. Best result per class in bold.}",
+        + (f"five seeds. {'One' if dropped == 1 else dropped} degenerate "
+           f"{'fit is' if dropped == 1 else 'fits are'} excluded, as described in "
+           r"Section~\ref{sec:setup:degenerate}. " if dropped else "five seeds. ")
+        + r"Best result per class in bold.}",
         f"\\label{{tab:full_{key}}}",
         r"\begin{tabular}{l" + "r" * len(rare) + "}", r"\toprule",
         "Method & " + " & ".join(rare) + r" \\", r"\midrule",

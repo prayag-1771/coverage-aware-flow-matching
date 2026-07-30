@@ -1,12 +1,12 @@
 \begin{table}[t]
 \centering
-\caption{Per-class F1 on CICIDS2017, mean $\pm$ standard deviation over five seeds. Best result per class in bold.}
+\caption{Per-class F1 on CICIDS2017, mean $\pm$ standard deviation over five seeds. One degenerate fit is excluded, as described in Section~\ref{sec:setup:degenerate}. Best result per class in bold.}
 \label{tab:full_cicids}
 \begin{tabular}{lrrr}
 \toprule
 Method & Bot & WebAttack & BruteForce \\
 \midrule
-None & 0.657\,\tiny{$\pm$0.368} & 0.788\,\tiny{$\pm$0.440} & 0.800\,\tiny{$\pm$0.447} \\
+None & 0.822\,\tiny{$\pm$0.007} & 0.985\,\tiny{$\pm$0.001} & 0.999\,\tiny{$\pm$0.000} \\
 Random oversample & 0.817\,\tiny{$\pm$0.006} & \textbf{0.992\,\tiny{$\pm$0.001}} & \textbf{1.000\,\tiny{$\pm$0.000}} \\
 SMOTE & 0.783\,\tiny{$\pm$0.002} & 0.987\,\tiny{$\pm$0.001} & 1.000\,\tiny{$\pm$0.000} \\
 ADASYN & 0.781\,\tiny{$\pm$0.001} & 0.983\,\tiny{$\pm$0.001} & 1.000\,\tiny{$\pm$0.000} \\
