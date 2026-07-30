@@ -28,6 +28,8 @@
   url     = {https://www.nature.com/articles/s41598-025-06363-5}
 }
 
+% CHECK: full author list and page range. "Yang, Hongwei" is the first author as
+% reported by the publisher page; confirm the remaining authors.
 @article{yang2025diffids,
   author  = {Yang, Hongwei and others},
   title   = {{Diff-IDS}: A Network Intrusion Detection Model Based on Diffusion
@@ -37,8 +39,6 @@
   number  = {3},
   year    = {2025},
   note    = {\url{https://www.techscience.com/cmc/v82n3/59921}}
-  % CHECK: full author list and page range. "Yang, Hongwei" is the first author
-  % as reported by the publisher page; confirm the remaining authors.
 }
 
 @article{cantone2024machine,
@@ -51,7 +51,9 @@
   year    = {2024}
 }
 
-@article{tavallaee2009detailed,
+% Corrected from @article: this is a conference paper and carries booktitle rather
+% than journal, which BibTeX reported as "empty journal".
+@inproceedings{tavallaee2009detailed,
   author    = {Tavallaee, Mahbod and Bagheri, Ebrahim and Lu, Wei and
                Ghorbani, Ali A.},
   title     = {A detailed analysis of the {KDD} {CUP} 99 data set},
@@ -59,7 +61,6 @@
                Defense Applications (CISDA)},
   year      = {2009},
   pages     = {1--6}
-  % CHECK: this is a conference paper; consider @inproceedings.
 }
 
 @inproceedings{moustafa2015unsw,
@@ -117,13 +118,13 @@
   year      = {2020}
 }
 
+% CHECK: page range in PMLR proceedings.
 @inproceedings{kotelnikov2023tabddpm,
   author    = {Kotelnikov, Akim and Baranchuk, Dmitry and Rubachev, Ivan and
                Babenko, Artem},
   title     = {{TabDDPM}: Modelling Tabular Data with Diffusion Models},
   booktitle = {International Conference on Machine Learning (ICML)},
   year      = {2023}
-  % CHECK: page range in PMLR proceedings.
 }
 
 @inproceedings{lipman2023flow,
@@ -171,6 +172,7 @@
 % benchmarking; the per-class utility question it leaves open is what this work
 % addresses.
 @article{architectural2026selection,
+  author  = {Ammara, Dure Adan and Ding, Jianguo and Tutschku, Kurt},
   title   = {Architectural Selection Framework for Synthetic Network Traffic:
              Quantifying the Fidelity--Utility Trade-off},
   journal = {IEEE Access},

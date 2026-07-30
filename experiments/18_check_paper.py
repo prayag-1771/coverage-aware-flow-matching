@@ -142,6 +142,31 @@ def main() -> int:
     if uncited:
         print(f"  note: in bib but never cited: {uncited}")
 
+    # ---- bibliography --------------------------------------------------------
+    # BibTeX does not accept % comments inside an entry: it reports "I was expecting
+    # a `,' or a `}'" and drops the record, so the citation renders as [?] while the
+    # LaTeX itself compiles perfectly. Three entries here carried CHECK notes between
+    # their last field and the closing brace.
+    bib_text = BIB.read_text(encoding="utf-8")
+    entries = re.findall(r"@(\w+)\s*\{\s*([^,]+),(.*?)\n\}", bib_text, re.S)
+    for kind, key, body in entries:
+        if re.search(r"^\s*%", body, re.M):
+            problems.append(f"bib entry {key!r} contains a % comment inside the "
+                            "entry; BibTeX will drop it")
+        fields = {m.lower() for m in re.findall(r"^\s*(\w+)\s*=", body, re.M)}
+        # An @article needs journal; @inproceedings needs booktitle. Getting this
+        # wrong yields "empty journal in <key>" and an incomplete reference.
+        if kind.lower() == "article" and "journal" not in fields:
+            problems.append(f"bib entry {key!r} is @article but has no journal "
+                            + ("(it has booktitle -- should it be @inproceedings?)"
+                               if "booktitle" in fields else ""))
+        if kind.lower() == "inproceedings" and "booktitle" not in fields:
+            problems.append(f"bib entry {key!r} is @inproceedings with no booktitle")
+        for required in ("author", "title", "year"):
+            if required not in fields:
+                problems.append(f"bib entry {key!r} has no {required}")
+    print(f"  {len(entries)} bib entries parsed")
+
     # ---- labels and refs -----------------------------------------------------
     labels = set(re.findall(r"\\label\{([^}]+)\}", tex))
     for tab in (ROOT / "paper" / "tables").glob("*.tex"):
