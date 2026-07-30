@@ -28,6 +28,10 @@ PRETTY = {
     "flowmatch": "Flow matching", "flowmatch_pertype": "Per-type flow",
 }
 GENERATIVE = ["ctgan", "diffusion", "flowmatch", "flowmatch_pertype"]
+# Random oversampling is included here: it is a classical rebalancing method and
+# excluding it would flatter the generative family on Worms, where plain duplication
+# is the outright winner.
+INTERPOLATION = ["random_oversample", "smote", "adasyn"]
 STEMS = {"NSL-KDD": "nsl_kdd_resampling", "UNSW-NB15": "unsw_resampling",
          "CICIDS2017": "cicids_resampling"}
 
@@ -158,6 +162,96 @@ def table_efficiency() -> str:
     return "\n".join(lines)
 
 
+def table_coverage() -> str:
+    """Sub-class coverage against the outcome it predicts.
+
+    The method claim of the paper rests on this: per-type generation helps where the
+    modelled attack types account for most of a class, and does not where they do not.
+    Two rows is a small table, but NSL-KDD is the only benchmark here carrying labels
+    beneath the coarse category -- which is itself the reason UNSW-NB15 acts as the
+    control, since coverage there is unity by construction.
+    """
+    gate = pd.read_csv(RESULTS / "per_type_gate.csv")
+    pc = pd.read_csv(RESULTS / "nsl_kdd_resampling_per_class.csv")
+    med = pc.groupby(["class", "arm"])["f1"].mean().unstack()
+
+    lines = [
+        r"\begin{table}[t]", r"\centering",
+        r"\caption{Sub-class coverage predicts where per-type generation helps. "
+        r"Coverage is the share of a class's training records belonging to an attack "
+        r"type with enough samples to be modelled ($\geq 20$). The class with $97\%$ "
+        r"coverage is won by per-type generation; the class with $58\%$ coverage is "
+        r"lost to classical resampling. NSL-KDD, five seeds.}",
+        r"\label{tab:coverage}",
+        r"\begin{tabular}{lrrrrr}", r"\toprule",
+        r"Class & Types & Coverage & Per-type & Best classical & $\Delta$ \\",
+        r"\midrule",
+    ]
+    for _, r in gate.iterrows():
+        cls = r["class"]
+        if cls not in med.index:
+            continue
+        pt = med.loc[cls, "flowmatch_pertype"]
+        classical = [a for a in INTERPOLATION if a in med.columns]
+        best = med.loc[cls, classical].max()
+        delta = pt - best
+        marker = r"\textbf{" if delta > 0 else "{"
+        lines.append(
+            f"{cls.upper()} & {int(r.types_modelled)}/"
+            f"{int(r.types_modelled + r.types_skipped)} & "
+            f"{marker}{r.coverage_fraction:.0%}}} & {pt:.4f} & {best:.4f} & "
+            f"{marker}{delta:+.4f}}} \\\\".replace("%", r"\%")
+        )
+    lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    return "\n".join(lines)
+
+
+def table_head_to_head() -> str:
+    """Best generative arm against best classical arm, per rare class.
+
+    Reported in full rather than only where it favours the generative family. Four of
+    nine is the honest count, and stating it is what allows the coverage result to be
+    read as a scope condition rather than as selective reporting.
+    """
+    rare = {"NSL-KDD": ["r2l", "u2r"],
+            "UNSW-NB15": ["Analysis", "Backdoor", "Shellcode", "Worms"],
+            "CICIDS2017": ["Bot", "WebAttack", "BruteForce"]}
+
+    lines = [
+        r"\begin{table}[t]", r"\centering",
+        r"\caption{Best generative arm against best classical arm on every rare "
+        r"class, by median over five seeds. The generative family leads on four of "
+        r"nine classes. Medians rather than means: roughly one learned-generator run "
+        r"in five collapses, and a single such seed inverts an arm's mean.}",
+        r"\label{tab:headtohead}",
+        r"\begin{tabular}{llrrr}", r"\toprule",
+        r"Dataset & Class & Generative & Classical & $\Delta$ \\", r"\midrule",
+    ]
+    wins = 0
+    prev = None
+    for ds, classes in rare.items():
+        pc = pd.read_csv(RESULTS / f"{STEMS[ds]}_per_class.csv")
+        med = pc.groupby(["class", "arm"])["f1"].median().unstack()
+        for cls in classes:
+            if cls not in med.index:
+                continue
+            g = med.loc[cls, [a for a in GENERATIVE if a in med.columns]].max()
+            c = med.loc[cls, [a for a in INTERPOLATION if a in med.columns]].max()
+            d = g - c
+            wins += d > 0
+            label = ds if ds != prev else ""
+            if prev is not None and ds != prev:
+                lines.append(r"\midrule")
+            prev = ds
+            cell = f"\\textbf{{{d:+.4f}}}" if d > 0 else f"{d:+.4f}"
+            lines.append(f"{label} & {cls} & {g:.4f} & {c:.4f} & {cell} \\\\")
+    lines += [r"\midrule",
+              f"\\multicolumn{{5}}{{l}}{{Generative family leads on {wins} of 9 "
+              r"classes.} \\",
+              r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    return "\n".join(lines)
+
+
 def table_robustness() -> str:
     """Cross-classifier transfer, framed as the validation it is."""
     x = pd.read_csv(RESULTS / "significance.csv")
@@ -199,6 +293,8 @@ def main() -> None:
     out = {
         "tab_improvements.tex": table_improvements(),
         "tab_efficiency.tex": table_efficiency(),
+        "tab_coverage.tex": table_coverage(),
+        "tab_headtohead.tex": table_head_to_head(),
         "tab_robustness.tex": table_robustness(),
         "tab_full_nslkdd.tex": table_full_comparison("NSL-KDD"),
         "tab_full_unsw.tex": table_full_comparison("UNSW-NB15"),

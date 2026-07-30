@@ -1,0 +1,24 @@
+\begin{table}[t]
+\centering
+\caption{Best generative arm against best classical arm on every rare class, by median over five seeds. The generative family leads on four of nine classes. Medians rather than means: roughly one learned-generator run in five collapses, and a single such seed inverts an arm's mean.}
+\label{tab:headtohead}
+\begin{tabular}{llrrr}
+\toprule
+Dataset & Class & Generative & Classical & $\Delta$ \\
+\midrule
+NSL-KDD & r2l & 0.2835 & 0.2474 & \textbf{+0.0361} \\
+ & u2r & 0.3962 & 0.4375 & -0.0413 \\
+\midrule
+UNSW-NB15 & Analysis & 0.0506 & 0.0734 & -0.0228 \\
+ & Backdoor & 0.1138 & 0.1065 & \textbf{+0.0073} \\
+ & Shellcode & 0.5383 & 0.4241 & \textbf{+0.1142} \\
+ & Worms & 0.5600 & 0.7191 & -0.1591 \\
+\midrule
+CICIDS2017 & Bot & 0.8303 & 0.8174 & \textbf{+0.0129} \\
+ & WebAttack & 0.9855 & 0.9917 & -0.0062 \\
+ & BruteForce & 0.9995 & 0.9998 & -0.0003 \\
+\midrule
+\multicolumn{5}{l}{Generative family leads on 4 of 9 classes.} \\
+\bottomrule
+\end{tabular}
+\end{table}

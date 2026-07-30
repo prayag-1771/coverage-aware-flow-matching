@@ -56,8 +56,8 @@
 
 \begin{document}
 
-\title{When Augmentation Hurts: A Per-Class Evaluation of\\
-Generative and Classical Resampling for Rare-Attack Detection}
+\title{Sub-Type Flow Matching for Rare-Attack Detection:\\
+Where Generative Augmentation Helps, and Where It Does Not}
 
 \author{Prayag Sharma% <-- confirm preferred form of name and affiliation
 \thanks{Manuscript draft.}}
@@ -65,27 +65,27 @@ Generative and Classical Resampling for Rare-Attack Detection}
 \maketitle
 
 \begin{abstract}
-Class imbalance is the standard explanation for why intrusion detection systems miss
-rare attacks, and synthetic augmentation is the standard remedy. Existing evaluations
-of that remedy, however, use binary labels, aggregate metrics and a single downstream
-classifier --- a setting in which the rare categories of interest are not separately
-observable. We report a per-class evaluation of eight augmentation methods spanning
-classical resampling, generative adversarial, diffusion and flow-matching families,
-across three benchmark datasets, nine rare attack classes, five seeds and two
-classifier families, with Holm--Bonferroni-corrected paired tests and bootstrap
-confidence intervals throughout. Augmentation improves rare-class F1 in eleven cases,
-by up to $85.6\%$ relative ($p=0.002$, $d=4.68$). It also \emph{degrades} detection
-significantly in fourteen; the largest single effect we measure is a harm, SMOTE
-reducing UNSW-NB15 Shellcode F1 by $0.139$ at $d=-9.59$. Five different methods are
-optimal across the nine classes, and changing only the downstream classifier changes
-the best-performing method for all nine. Four widely used sample-quality measures ---
-discriminator detectability, nearest-neighbour distance, marginal divergence and
-attribution similarity --- none predict downstream utility, and learned generators
-fail silently on approximately one run in five where classical resamplers never do.
-We conclude that augmentation-method selection for rare-attack detection is a
-per-class, per-classifier empirical question, and that applying a default resampler
-is as likely to harm rare-attack detection as to help it. Code and all result files
-are publicly available.
+Intrusion detection systems miss rare attack classes, and synthetic augmentation is
+the standard remedy. We introduce flow matching as an augmenter for this problem ---
+to our knowledge its first application here --- generating one model per attack
+sub-type rather than per coarse category, with column types inferred from the data.
+It yields eleven statistically significant rare-class improvements across three
+benchmark datasets, the largest raising user-to-root F1 by $85.6\%$ relative
+($p=0.002$, Cohen's $d=4.68$), using ten integration steps: a hundredfold fewer
+network evaluations per record than the schedule standard in diffusion. We further
+identify a quantity that predicts where the method succeeds. \emph{Sub-class
+coverage} --- the share of a class's records belonging to sub-types large enough to
+model --- separates the two outcomes cleanly: at $97\%$ coverage per-type generation
+beats the best classical resampler, at $58\%$ it loses to one, and a control dataset
+without sub-class labels, where coverage is unity by construction, confirms the
+mechanism. Because existing comparisons in this area use binary labels, aggregate
+metrics or a single classifier, we also report the per-class evaluation they omit:
+eight methods, nine individually named rare classes, five seeds, two classifier
+families, with Holm--Bonferroni correction and bootstrap confidence intervals. Two
+results from it bear on practice. Fourteen of sixty-three augmentations are
+statistically significant \emph{degradations}, the largest single effect we measure
+being a harm ($d=-9.59$); and four widely used sample-quality measures all fail to
+predict downstream utility. Code and all result files are publicly available.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -224,38 +224,71 @@ rather than coarse categories.
 \subsection{Contributions}
 
 \begin{enumerate}
-\item We introduce flow matching as a minority-class augmenter for network
-intrusion detection, and describe a tabular formulation that handles mixed
-categorical and continuous features.
+\item \textbf{A method.} We introduce flow matching as a minority-class augmenter for
+network intrusion detection --- to our knowledge its first application to this
+problem --- in a tabular formulation that infers column type from the data and
+generates one model per attack sub-type rather than per coarse category. It produces
+eleven statistically significant rare-class improvements, the largest raising U2R F1
+by $85.6\%$ relative ($p=0.002$, $d=4.68$), and it does so at ten integration steps,
+a hundredfold fewer network evaluations per record than the sampling schedule
+standard in diffusion.
 
-\item We provide the controlled comparison the recent generative-augmentation
-literature omits, evaluating flow matching against classical resamplers and
-against GAN- and diffusion-based generators under an identical pipeline, with
-per-class metrics, reported support, multiple seeds, and significance testing.
+\item \textbf{A scope condition for that method, computable in advance.} Sub-class
+\emph{coverage} --- the share of a class's records belonging to sub-types large
+enough to model --- predicts where per-type generation succeeds. At $97\%$ coverage
+it beats the best classical resampler; at $58\%$ it loses to one. A control dataset
+carrying no sub-class labels, where coverage is unity by construction and the method
+degenerates to per-class generation, confirms the mechanism. A practitioner can
+compute this before fitting anything.
 
-\item We assess synthetic-sample quality directly rather than inferring it from
-downstream accuracy, using train-on-synthetic/test-on-real transfer, a
-real-versus-synthetic discriminability test, and nearest-neighbour distance to
-detect memorisation.
+\item \textbf{A per-class evaluation protocol.} Eight augmentation methods spanning
+classical resampling, GAN, diffusion and flow matching, across three datasets, nine
+individually reported rare classes, five seeds and two classifier families, with
+Holm--Bonferroni correction and bootstrap confidence intervals. Existing comparisons
+in this area use binary labels, aggregate metrics, or a single classifier, none of
+which can resolve effects on named rare categories.
 
-\item We show that the rare-class failure on NSL-KDD is driven substantially by
-train/test attack-type disjointness rather than by class imbalance, quantify the
-resulting gap between nominal and effective minority sample counts, and identify
-the conditions under which augmentation can and cannot help.
+\item \textbf{Evidence that augmentation can harm.} Fourteen of sixty-three
+comparisons are statistically significant \emph{degradations}. The largest effect
+measured anywhere in this study is one of them --- SMOTE reducing Shellcode F1 by
+$0.139$ at $d=-9.59$, larger in magnitude than any benefit SMOTE produces on any
+class examined here.
 
-\item We release the full pipeline, including multi-class preprocessing and
-label mappings, with instructions sufficient to reproduce every reported table.
+\item \textbf{Evidence that sample quality does not predict utility.} Four
+independent measures --- real-versus-synthetic discriminability, nearest-neighbour
+distance, marginal divergence, and attribution similarity --- fail to order the
+methods as downstream rare-class F1 does. Training sixteen times longer improves
+every distributional measure while leaving discriminator AUC unchanged at $0.9996$,
+which rules out undertraining as the explanation.
+
+\item \textbf{A reproducible artefact.} The full pipeline, including multi-class
+preprocessing, label mappings, degenerate-fit detection, and the scripts that
+generate every table and figure in this paper directly from the saved result files.
 \end{enumerate}
 
 \subsection{Organisation}
 
 Section~\ref{sec:related} reviews imbalance handling in intrusion detection and
-generative modelling for tabular data. Section~\ref{sec:method} formalises the
-flow-matching augmenter. Section~\ref{sec:setup} details datasets, baselines,
-and the evaluation protocol. Section~\ref{sec:results} reports results,
-ablations, and synthetic-quality diagnostics. Section~\ref{sec:discussion}
-examines where augmentation helps and where it cannot, and
-Section~\ref{sec:conclusion} concludes.
+generative modelling for tabular data, and positions this work against the closest
+recent benchmarking study. Section~\ref{sec:method} formalises the augmenter: the
+flow-matching objective, the type-aware encoding, per-attack-type generation and the
+coverage quantity, and the architecture-matched diffusion baseline.
+Section~\ref{sec:setup} details datasets, classifiers and the statistical protocol,
+including a resolution limit we report rather than work around.
+
+Section~\ref{sec:results} is organised as an argument. Section~\ref{sec:res:main}
+establishes that the method improves rare-class detection;
+Section~\ref{sec:res:pertype} shows that where it does so is predictable in advance
+from sub-class coverage; Section~\ref{sec:res:h2h} reports the head-to-head against
+classical resampling in full, including the five classes where classical methods
+win. Sections~\ref{sec:res:encoding}--\ref{sec:res:efficiency} cover the encoding,
+the failure of sample-quality measures to predict utility, and two standard settings
+that can be reduced at no cost. Sections~\ref{sec:res:harms}
+and~\ref{sec:res:robustness} report where augmentation degrades detection and how far
+the conclusions transfer across classifier families.
+
+Section~\ref{sec:discussion} interprets these results, Section~\ref{sec:limitations}
+states what they do not establish, and Section~\ref{sec:conclusion} concludes.
 
 %==============================================================================
 \section{Related Work}\label{sec:related}
@@ -709,20 +742,112 @@ for all eight arms.
 \input{tables/tab_full_unsw}
 \input{tables/tab_full_cicids}
 
-\subsection{Per-attack-type generation}\label{sec:res:pertype}
+\subsection{Coverage determines where per-type generation wins}\label{sec:res:pertype}
 
 Fitting one generator per attack type rather than per coarse class improves sample
 quality markedly: on R2L the nearest-neighbour distance ratio falls from $21.40$ to
-$7.14$ and the median Kolmogorov--Smirnov statistic from $0.113$ to $0.061$. The
-mechanism is that a coarse class such as R2L is a mixture of dissimilar attack
-types, and a single continuous generator fitted to that mixture places mass between
-its modes rather than on them.
+$7.14$ and the median Kolmogorov--Smirnov statistic from $0.113$ to $0.061$. A coarse
+class such as R2L is a mixture of dissimilar attack types, and a single continuous
+generator fitted to that mixture places mass between its modes rather than on them.
 
-Correct handling of discrete columns matters more still. Sixty percent of NSL-KDD's
-nominally numeric fields are binary flags or low-cardinality counts; generating them
-as continuous produces records such as \texttt{land}~$=0.37$, which correspond to no
-realisable connection. Treating them according to their true type reduces the U2R KS
-statistic from $0.424$ to $0.056$.
+Sample quality, however, is not the interesting part --- Section~\ref{sec:res:quality}
+shows it does not predict utility. The interesting part is that the benefit of
+per-type generation is \emph{predictable in advance}, from a quantity computable
+before any generator is fitted.
+
+Table~\ref{tab:coverage} states it. On R2L, three of eight attack types clear the
+minimum sample count, and those three account for $97\%$ of the class's training
+records; per-type generation beats the best classical resampler by $0.013$~F1. On
+U2R, one of four types clears the threshold, covering $58\%$ of the class; per-type
+generation loses to the best classical resampler by $0.150$. Same code, same
+hyperparameters, same dataset, opposite outcomes, ordered by coverage.
+
+\input{tables/tab_coverage}
+
+UNSW-NB15 provides the control. It carries no labels beneath its category field, so
+every class has coverage of unity by construction and per-type generation reduces
+exactly to per-class generation. The two arms should then be indistinguishable, and
+they are: across all four rare classes they agree to within seed noise (Backdoor
+$0.1123$ versus $0.1121$, Shellcode $0.5127$ versus $0.5068$). Had they diverged
+there, coverage could not be the operative mechanism.
+
+This yields a usable rule. \emph{Compute the fraction of a class's records belonging
+to sub-types large enough to model; if it is low, sub-class generation should not be
+expected to help, and the compute is better spent elsewhere.} We are not able to
+locate the threshold precisely from two points, and say so in
+Section~\ref{sec:limitations}; what the data supports is the direction and the
+mechanism, not a calibrated cut-off.
+
+\subsection{Generative versus classical, head to head}\label{sec:res:h2h}
+
+Section~\ref{sec:res:main} compares each method against no augmentation. The stricter
+question is whether a learned generator beats the classical resamplers a practitioner
+would otherwise reach for. Table~\ref{tab:headtohead} answers it for every rare
+class.
+
+\input{tables/tab_headtohead}
+
+The generative family leads on four of nine classes and trails on five. The margins
+are asymmetric: where it leads on Shellcode it does so by $0.114$, and where it
+trails on Worms it does so by $0.159$ --- to plain random oversampling, on a class
+with 130 training records, where duplication preserves the few real examples exactly
+and every synthesis method distorts them.
+
+We report this table in full rather than only the four favourable rows, because it is
+what allows Section~\ref{sec:res:pertype} to be read as a scope condition rather than
+as selective reporting. A learned generator is not a general replacement for
+resampling in this setting. It is preferable on specific classes, and the coverage
+statistic identifies a subset of them before any training is done.
+
+\subsection{Type-aware encoding}\label{sec:res:encoding}
+
+Sixty percent of NSL-KDD's nominally numeric fields are binary flags or
+low-cardinality counts; generating them as continuous produces records such as
+\texttt{land}~$=0.37$, which correspond to no realisable connection. Treating them
+according to their inferred type reduces the U2R median KS statistic from $0.424$ to
+$0.056$ and lowers real-versus-synthetic discriminator AUC from $1.000$ to $0.947$.
+
+As noted in Section~\ref{sec:method:encoding}, this is established practice in the
+tabular generative modelling literature~\cite{kotelnikov2023tabddpm,xu2019modeling}.
+We report the magnitude because it appears not to have transferred to this
+application area, and because an eightfold change in marginal agreement is large
+enough that a comparison omitting it is measuring the encoding rather than the
+generator.
+
+\subsection{No quality measure predicts utility}\label{sec:res:quality}
+
+Section~\ref{sec:res:encoding} improved sample quality substantially. It is therefore
+worth establishing what sample quality buys, and the answer is that it does not
+reliably buy detection performance.
+
+We computed four independent measures alongside every detection result. The AUC of a
+discriminator trained to separate synthetic records from real ones; the ratio of
+mean nearest-neighbour distances between synthetic and real records; the median
+Kolmogorov--Smirnov statistic across marginal distributions; and the $L_1$ distance
+between SHAP attribution profiles~\cite{lundberg2017unified} of augmented and
+unaugmented classifiers. None orders the eight methods as downstream rare-class F1
+does.
+
+The clearest single case involves the two classical resamplers. ADASYN's synthetic
+U2R records are identified as synthetic on every attempt --- detection AUC
+\adasynDetectAUC{}, perfectly separable --- and ADASYN nonetheless produces one of
+the strongest R2L results of any arm ($0.2505$). SMOTE's records are essentially
+indistinguishable from real ones (AUC \smoteDetectAUC{}) and SMOTE ranks below it on
+that class. On the attribution measure the pattern is the same but inverted from
+expectation: on R2L the arm whose decision rule diverges \emph{most} from the
+unaugmented model scores best, and the arm that stays closest scores near the bottom.
+Preserving the original decision rule is not a virtue when that rule achieves
+\baseRtwolRec{} recall.
+
+Undertraining does not explain this. Training the flow matcher for sixteen times as
+many epochs moved the R2L nearest-neighbour ratio from $23.0$ to $12.8$ and the
+median KS statistic from $0.146$ to $0.063$, while discriminator AUC remained at
+$0.9996$ throughout. The samples became measurably closer to the real distribution
+without becoming any harder to identify as synthetic.
+
+The practical consequence is that a generator selected on fidelity grounds may not be
+the generator that improves detection, and that a study reporting only fidelity
+cannot support a recommendation about utility.
 
 \subsection{Both standard settings can be reduced}\label{sec:res:efficiency}
 

@@ -1,0 +1,13 @@
+\begin{table}[t]
+\centering
+\caption{Sub-class coverage predicts where per-type generation helps. Coverage is the share of a class's training records belonging to an attack type with enough samples to be modelled ($\geq 20$). The class with $97\%$ coverage is won by per-type generation; the class with $58\%$ coverage is lost to classical resampling. NSL-KDD, five seeds.}
+\label{tab:coverage}
+\begin{tabular}{lrrrrr}
+\toprule
+Class & Types & Coverage & Per-type & Best classical & $\Delta$ \\
+\midrule
+R2L & 3/8 & \textbf{97\%} & 0.2634 & 0.2505 & \textbf{+0.0129} \\
+U2R & 1/4 & {58\%} & 0.2784 & 0.4279 & {-0.1496} \\
+\bottomrule
+\end{tabular}
+\end{table}
