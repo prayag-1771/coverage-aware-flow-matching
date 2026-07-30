@@ -87,7 +87,10 @@ def main() -> int:
     #   \_  \&  \%  \$  \#   escaped literals, whose following word is ordinary text
     #                        (\texttt{attack\_cat} would otherwise report "_cat")
     #   x_i  \sum_  a^2      sub/superscripts, which capture the following word
-    scan = re.sub(r"\\[_&%$#{}]", " ", tex)
+    # `\\` is a line break, not the start of a macro: in `\\Rare-Attack` a naive scan
+    # reads the second backslash plus the following word and reports "Rare".
+    scan = re.sub(r"\\\\", " ", tex)
+    scan = re.sub(r"\\[_&%$#{}]", " ", scan)
     scan = re.sub(r"[_^]\{?\w+\}?", " ", scan)
 
     defined = set(re.findall(r"\\newcommand\{\\(\w+)\}", tex))
