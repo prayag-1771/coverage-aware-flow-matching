@@ -440,7 +440,7 @@ $n_c = |\{i : y_i = c\}|$ are severely unequal: on NSL-KDD the U2R category hold
 \utwrTrain{} training records against \numnormal{} benign ones, a ratio of
 \utwrRatio{}.
 
-Figure~\ref{fig:pipeline} shows the pipeline these arms sit inside. An
+Fig.~\ref{fig:pipeline} shows the pipeline these arms sit inside. An
 augmentation arm is a map $\mathcal{A}$ that takes the training partition and
 returns an enlarged one,
 \begin{equation}
@@ -769,7 +769,8 @@ manuscript is transcribed by hand.
 All numbers in this section are produced by \texttt{experiments/17\_paper\_tables.py}
 directly from the saved result files; none are transcribed by hand. Every arm sees
 the same splits, the same seeds, and the same preprocessing, and augmentation is
-applied to the training partition only.
+applied to the training partition only, under the rules of
+Section~\ref{sec:method:leak}.
 
 \subsection{Rare-class detection improves substantially}\label{sec:res:main}
 

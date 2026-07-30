@@ -184,6 +184,29 @@ def main() -> int:
         if not path.exists():
             problems.append(f"\\input target missing: {path.relative_to(ROOT)}")
 
+    # ---- reference style must be consistent -----------------------------------
+    # IEEE uses "Fig. N" for figures, "Table N" for tables, and a bare "(N)" from
+    # \eqref for equations. Mixing "Figure 1" with "Fig. 2" in one manuscript is the
+    # kind of thing a copy editor returns, and it is invisible when each reference is
+    # written months apart. Checked on the text preceding each \ref.
+    style_rules = [
+        ("fig:", r"Figs?\.", ("Figure", "Figures", "figure", "fig")),
+        ("tab:", r"Tables?", ("Tab.", "tab.", "table")),
+    ]
+    for prefix, good, bad_words in style_rules:
+        for word in bad_words:
+            hits = re.findall(rf"{re.escape(word)}~?\\ref\{{{prefix}", tex)
+            if hits:
+                canon = "Fig." if prefix == "fig:" else "Table"
+                problems.append(
+                    f'{len(hits)} reference(s) written "{word}~\\ref{{{prefix}...}}"; '
+                    f'this manuscript uses "{canon}~"')
+    # Equations: \eqref renders "(5)"; a plain \ref gives a bare "5" and reads wrong.
+    plain_eq = re.findall(r"(?<!eq)\\ref\{eq:", tex)
+    if plain_eq:
+        problems.append(f"{len(plain_eq)} equation reference(s) use \\ref instead of "
+                        r"\eqref, which drops the parentheses")
+
     # ---- the standalone build must not be stale -------------------------------
     # main_standalone.tex is what gets uploaded, and it is derived from main.tex by
     # expanding every \input. Editing main.tex without regenerating leaves the
