@@ -1,0 +1,33 @@
+\begin{table}[t]
+\centering
+\caption{Settings used throughout. No hyperparameter is tuned per augmentation arm: doing so would confound the effect of the arm with the effort spent tuning it. Values are read from the source at table-generation time rather than transcribed.}
+\label{tab:hyper}
+\begin{tabular}{llr}
+\toprule
+Component & Setting & Value \\
+\midrule
+Flow matching / diffusion & Hidden width & 512 \\
+ & Integration steps & 50 \\
+ & Training epochs & 300 \\
+ & Batch size (GPU) & 4,096 \\
+ & Discrete-column threshold & $\leq 10$ values \\
+ & Min. records per attack type & 20 \\
+\midrule
+CTGAN & Training epochs & 50 \\
+ & Batch size & 4,000 \\
+ & Min. records to fit & 50 \\
+\midrule
+XGBoost & Trees & 200 \\
+ & Max depth & 6 \\
+ & Learning rate & 0.3 \\
+ & Subsample & 0.8 \\
+ & Column subsample & 0.8 \\
+\midrule
+MLP & Hidden layers & 256 / 128 \\
+ & Dropout & 0.2 \\
+ & Learning rate & $10^{-3}$ \\
+ & Weight decay & $10^{-4}$ \\
+ & Max epochs / patience & 60 / 5 \\
+\bottomrule
+\end{tabular}
+\end{table}

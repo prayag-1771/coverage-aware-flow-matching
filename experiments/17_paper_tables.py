@@ -252,6 +252,172 @@ def table_head_to_head() -> str:
     return "\n".join(lines)
 
 
+def table_datasets() -> str:
+    """Class distribution across all three benchmarks.
+
+    Standard in this literature and absent from an earlier draft. Reviewers use it to
+    check that the rare classes named in the results have enough test support to
+    carry a per-class F1, which is exactly the question that led us to exclude
+    Infiltration and Heartbleed from every headline claim.
+    """
+    import warnings
+    warnings.filterwarnings("ignore")
+    from src.data.nsl_kdd import load_nsl_kdd, CLASS_ORDER as NSL
+    from src.data.unsw_nb15 import load_unsw_nb15, CLASS_ORDER as UNSW
+    from src.data.cicids2017 import (
+        CLASS_ORDER as CIC, load_cicids2017, stratified_split, RARE_CLASSES,
+        UNRELIABLE_CLASSES,
+    )
+
+    blocks = []
+    tr, te = load_nsl_kdd()
+    blocks.append(("NSL-KDD", NSL, tr.label.value_counts(), te.label.value_counts(),
+                   {"r2l", "u2r"}, set()))
+    tr, te = load_unsw_nb15()
+    blocks.append(("UNSW-NB15", UNSW, tr.label.value_counts(),
+                   te.label.value_counts(),
+                   {"Analysis", "Backdoor", "Shellcode", "Worms"}, set()))
+    df = load_cicids2017()
+    tr, te = stratified_split(df, test_size=0.3, seed=42)
+    blocks.append(("CICIDS2017", CIC, tr.label.value_counts(), te.label.value_counts(),
+                   set(RARE_CLASSES), set(UNRELIABLE_CLASSES)))
+
+    lines = [
+        r"\begin{table}[t]", r"\centering",
+        r"\caption{Class distribution of the three benchmarks. Rare classes studied "
+        r"here are in bold. Two CICIDS2017 classes marked $\dagger$ are excluded from "
+        r"all headline claims: with 11 and 3 test records their per-class F1 cannot "
+        r"be estimated stably.}",
+        r"\label{tab:datasets}",
+        r"\begin{tabular}{llrrr}", r"\toprule",
+        r"Dataset & Class & Train & Test & Share \\", r"\midrule",
+    ]
+    for i, (name, order, trc, tec, rare, unreliable) in enumerate(blocks):
+        if i:
+            lines.append(r"\midrule")
+        total = int(trc.sum())
+        for j, cls in enumerate(order):
+            n_tr, n_te = int(trc.get(cls, 0)), int(tec.get(cls, 0))
+            label = cls + (r"$^\dagger$" if cls in unreliable else "")
+            if cls in rare or cls in unreliable:
+                label = f"\\textbf{{{label}}}"
+            ds = name if j == 0 else ""
+            lines.append(f"{ds} & {label} & {n_tr:,} & {n_te:,} & "
+                         f"{n_tr/total:.3%} \\\\".replace("%", r"\%"))
+    lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    return "\n".join(lines)
+
+
+def table_hyperparameters() -> str:
+    """Every setting needed to reproduce a run, in one place.
+
+    Read out of the source modules rather than typed, so it cannot drift from what
+    the code actually does -- the failure mode that made an earlier ablation report
+    identical results at 10, 50 and 100 steps.
+    """
+    from src.augment.flow_matching import (
+        DEFAULT_BATCH_GPU, DISCRETE_MAX_CARDINALITY, TabularFlowMatcher,
+    )
+    from src.augment.ctgan_arm import DEFAULT_BATCH, DEFAULT_EPOCHS
+    from src.augment.per_type import MIN_SAMPLES_PER_TYPE
+    from src.models import mlp as M
+    from src.models.classifier import COLSAMPLE_BYTREE, SUBSAMPLE
+
+    fm = TabularFlowMatcher([], [])
+    rows = [
+        ("Flow matching / diffusion", [
+            ("Hidden width", getattr(fm, "hidden", 256)),
+            ("Integration steps", fm.steps),
+            ("Training epochs", fm.epochs),
+            ("Batch size (GPU)", f"{DEFAULT_BATCH_GPU:,}"),
+            ("Discrete-column threshold", f"$\\leq {DISCRETE_MAX_CARDINALITY}$ values"),
+            ("Min. records per attack type", MIN_SAMPLES_PER_TYPE),
+        ]),
+        ("CTGAN", [
+            ("Training epochs", DEFAULT_EPOCHS),
+            ("Batch size", f"{DEFAULT_BATCH:,}"),
+            ("Min. records to fit", 50),
+        ]),
+        ("XGBoost", [
+            ("Trees", 200), ("Max depth", 6), ("Learning rate", 0.3),
+            ("Subsample", SUBSAMPLE), ("Column subsample", COLSAMPLE_BYTREE),
+        ]),
+        ("MLP", [
+            ("Hidden layers", " / ".join(str(h) for h in M.HIDDEN)),
+            ("Dropout", M.DROPOUT),
+            ("Learning rate", f"$10^{{-3}}$"),
+            ("Weight decay", f"$10^{{-4}}$"),
+            ("Max epochs / patience", f"{M.MAX_EPOCHS} / {M.PATIENCE}"),
+        ]),
+    ]
+    lines = [
+        r"\begin{table}[t]", r"\centering",
+        r"\caption{Settings used throughout. No hyperparameter is tuned per "
+        r"augmentation arm: doing so would confound the effect of the arm with the "
+        r"effort spent tuning it. Values are read from the source at table-generation "
+        r"time rather than transcribed.}",
+        r"\label{tab:hyper}",
+        r"\begin{tabular}{llr}", r"\toprule",
+        r"Component & Setting & Value \\", r"\midrule",
+    ]
+    for i, (comp, settings) in enumerate(rows):
+        if i:
+            lines.append(r"\midrule")
+        for j, (k, v) in enumerate(settings):
+            lines.append(f"{comp if j == 0 else ''} & {k} & {v} \\\\")
+    lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    return "\n".join(lines)
+
+
+def table_feature_types() -> str:
+    """The column-type audit that motivates type-aware encoding."""
+    import warnings
+    warnings.filterwarnings("ignore")
+    from src.data.nsl_kdd import CATEGORICAL_COLUMNS, FEATURE_COLUMNS, load_nsl_kdd
+
+    tr, _ = load_nsl_kdd()
+    numeric = [c for c in FEATURE_COLUMNS if c not in CATEGORICAL_COLUMNS]
+    binary, low, integer, cont = [], [], [], []
+    for c in numeric:
+        u = tr[c].nunique()
+        if u <= 2:
+            binary.append(c)
+        elif u <= 10:
+            low.append(c)
+        elif (tr[c] % 1 == 0).all():
+            integer.append(c)
+        else:
+            cont.append(c)
+
+    groups = [
+        ("Binary flag", binary, r"\texttt{land}, \texttt{logged\_in}"),
+        ("Low-cardinality count", low, r"\texttt{num\_shells}, \texttt{urgent}"),
+        ("Unbounded integer count", integer, r"\texttt{src\_bytes}, \texttt{duration}"),
+        ("Continuous", cont, r"\texttt{serror\_rate}, \texttt{same\_srv\_rate}"),
+    ]
+    discrete = len(binary) + len(low) + len(integer)
+    lines = [
+        r"\begin{table}[t]", r"\centering",
+        r"\caption{NSL-KDD's nominally numeric columns by their actual type. "
+        f"Only {len(cont)} of {len(numeric)} are genuinely continuous; the remaining "
+        f"{discrete} ({discrete/len(numeric):.0%}) are discrete and, generated as "
+        r"continuous coordinates, yield records such as \texttt{land}~$=0.37$.}"
+        .replace("%", r"\%"),
+        r"\label{tab:feattypes}",
+        r"\begin{tabular}{lrl}", r"\toprule",
+        r"Column type & Count & Examples \\", r"\midrule",
+    ]
+    for name, cols, ex in groups:
+        bold = r"\textbf{" if name == "Continuous" else "{"
+        lines.append(f"{name} & {bold}{len(cols)}}} & {ex} \\\\")
+    lines += [r"\midrule",
+              f"\\emph{{Discrete in total}} & \\textbf{{{discrete}}} & "
+              f"\\emph{{{discrete/len(numeric):.0%} of numeric columns}} \\\\"
+              .replace("%", r"\%"),
+              r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    return "\n".join(lines)
+
+
 def table_robustness() -> str:
     """Cross-classifier transfer, framed as the validation it is."""
     x = pd.read_csv(RESULTS / "significance.csv")
@@ -326,6 +492,9 @@ def build_standalone() -> Path:
 def main() -> None:
     TABDIR.mkdir(parents=True, exist_ok=True)
     out = {
+        "tab_datasets.tex": table_datasets(),
+        "tab_feattypes.tex": table_feature_types(),
+        "tab_hyper.tex": table_hyperparameters(),
         "tab_improvements.tex": table_improvements(),
         "tab_efficiency.tex": table_efficiency(),
         "tab_coverage.tex": table_coverage(),

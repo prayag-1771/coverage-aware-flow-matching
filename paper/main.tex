@@ -497,6 +497,8 @@ are genuinely continuous. Transported as continuous coordinates, these fields
 produce records with \texttt{land}~$=0.37$, which describes no realisable
 connection.
 
+\input{tables/tab_feattypes}
+
 We therefore infer column type from the training partition and encode accordingly:
 columns with at most ten distinct values are treated as discrete and one-hot
 encoded, integer counts are modelled after a $\log(1+x)$ transform and rounded on
@@ -624,6 +626,8 @@ several web-attack labels are mis-encoded, appearing with a replacement characte
 where a hyphen was intended. Records with non-finite features are dropped and the
 labels are normalised.
 
+\input{tables/tab_datasets}
+
 Infiltration (25 training records) and Heartbleed (8) are excluded from all
 headline claims: with 11 and 3 test records respectively, their per-class F1 cannot
 be estimated stably, and including them destabilises macro-F1 by up to $0.13$
@@ -723,6 +727,8 @@ runtime for identical work before it was identified.
 Every result reported here is written to disk as it is produced and every table and
 figure in this paper is generated from those files by script. No number in this
 manuscript is transcribed by hand.
+
+\input{tables/tab_hyper}
 \section{Results}\label{sec:results}
 
 All numbers in this section are produced by \texttt{experiments/17\_paper\_tables.py}

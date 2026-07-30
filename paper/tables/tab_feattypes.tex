@@ -1,0 +1,17 @@
+\begin{table}[t]
+\centering
+\caption{NSL-KDD's nominally numeric columns by their actual type. Only 15 of 38 are genuinely continuous; the remaining 23 (61\%) are discrete and, generated as continuous coordinates, yield records such as \texttt{land}~$=0.37$.}
+\label{tab:feattypes}
+\begin{tabular}{lrl}
+\toprule
+Column type & Count & Examples \\
+\midrule
+Binary flag & {6} & \texttt{land}, \texttt{logged\_in} \\
+Low-cardinality count & {6} & \texttt{num\_shells}, \texttt{urgent} \\
+Unbounded integer count & {11} & \texttt{src\_bytes}, \texttt{duration} \\
+Continuous & \textbf{15} & \texttt{serror\_rate}, \texttt{same\_srv\_rate} \\
+\midrule
+\emph{Discrete in total} & \textbf{23} & \emph{61\% of numeric columns} \\
+\bottomrule
+\end{tabular}
+\end{table}
