@@ -51,6 +51,7 @@ KNOWN = {
     "kappa", "eta", "zeta", "iota", "nu", "xi", "chi", "upsilon", "varepsilon",
     "Gamma", "Lambda", "Phi", "Psi", "Theta",
     "columnwidth", "textwidth", "linewidth", "textheight", "hsize",
+    "rightarrow", "leftarrow", "Rightarrow", "leftrightarrow", "mapsto",
     "today", "IEEEauthorblockN", "IEEEauthorblockA", "textsuperscript",
     "textsubscript", "and", "IEEEoverridecommandlockouts",
 }

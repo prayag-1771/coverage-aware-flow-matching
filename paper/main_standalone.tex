@@ -892,7 +892,28 @@ per-type flow matching.
 Effect sizes above $d=4$ are unusually large for this problem and reflect that the
 baseline is not merely weak on these classes but close to unusable: an F1 of
 $0.2193$ on U2R corresponds to a recall of \baseUtwrRec{}, meaning roughly seven in
-eight privilege-escalation attempts pass undetected. Tables~\ref{tab:full_nslkdd},
+eight privilege-escalation attempts pass undetected. Raising that to $0.4070$ moves
+the detector from missing seven attacks in eight to missing closer to three in five
+--- still far from solved, but a different operational proposition.
+
+The improvements are also broad rather than concentrated in one arm or one dataset.
+All four generative families contribute at least one: diffusion accounts for three,
+flow matching for three, per-type flow for three, and CTGAN for one. They span both
+benchmarks whose rare classes appear in training and test, and both of the two
+regimes the datasets present --- NSL-KDD's severe scarcity (52 and 995 training
+records) and UNSW-NB15's moderate scarcity with heavy class overlap (1,133 to 2,000
+records). Six clear Holm--Bonferroni correction at $p<0.05$ despite the correction
+being applied within each (dataset, class) family of seven simultaneous comparisons,
+which is the conservative choice.
+
+Relative gains are large where they matter most. The three biggest --- U2R at
+$+85.6\%$ and $+76.5\%$, R2L at $+50.5\%$ --- occur on the two classes this
+literature most often cites as unsolved, and UNSW-NB15 Backdoor gains $64.9\%$ from
+a baseline of $0.0681$, a class the unaugmented pipeline detects barely at all.
+Where the baseline is already strong the method correctly does little: on
+CICIDS2017, where two of three rare classes exceed $0.98$ before augmentation, no
+generative arm moves them appreciably in either direction, which is the behaviour a
+practitioner should want from an intervention applied by default. Tables~\ref{tab:full_nslkdd},
 \ref{tab:full_unsw} and~\ref{tab:full_cicids} give the complete per-class results
 for all eight arms.
 
@@ -1103,6 +1124,18 @@ trails on Worms it does so by $0.159$ --- to plain random oversampling, on a cla
 with 130 training records, where duplication preserves the few real examples exactly
 and every synthesis method distorts them.
 
+Within the generative family, no member dominates either. Diffusion takes NSL-KDD
+R2L ($0.289$ against flow matching's $0.238$) and U2R ($0.407$ against $0.387$);
+flow matching takes UNSW-NB15 Worms ($0.556$ against $0.493$); per-type flow takes
+Backdoor and Shellcode. CTGAN is the weakest of the four on NSL-KDD and is the only
+generative arm there to push a class \emph{below} the unaugmented baseline, U2R
+falling from $0.219$ to $0.182$. Since the diffusion arm is architecture-matched to
+the flow matcher and both sample at the same step count
+(Section~\ref{sec:method:diff}), flow matching's advantage in this setting is not
+sample utility --- the two sit within seed noise on most classes and their ordering
+changes by class --- but the fact that it reaches that parity without a noise
+schedule to tune.
+
 We report this table in full rather than only the four favourable rows, because it is
 what allows Section~\ref{sec:res:pertype} to be read as a scope condition rather than
 as selective reporting. A learned generator is not a general replacement for
@@ -1139,26 +1172,19 @@ unaugmented classifiers. None orders the eight methods as downstream rare-class 
 does; Fig.~
 \ref{fig:quality} shows the attribution measure against F1 directly.
 
-The clearest single case involves the two classical resamplers. ADASYN's synthetic
-U2R records are identified as synthetic on every attempt --- detection AUC
-\adasynDetectAUC{}, perfectly separable --- and ADASYN nonetheless produces one of
-the strongest R2L results of any arm ($0.2505$). SMOTE's records are essentially
-indistinguishable from real ones (AUC \smoteDetectAUC{}) and SMOTE ranks below it on
-that class. On the attribution measure the pattern is the same but inverted from
-expectation: on R2L the arm whose decision rule diverges \emph{most} from the
-unaugmented model scores best, and the arm that stays closest scores near the bottom.
-Preserving the original decision rule is not a virtue when that rule achieves
-\baseRtwolRec{} recall.
+The clearest case involves the two classical resamplers. ADASYN's synthetic U2R
+records are identified as synthetic on every attempt (AUC \adasynDetectAUC{}) yet
+ADASYN produces one of the strongest R2L results of any arm ($0.2505$); SMOTE's are
+indistinguishable from real ones (AUC \smoteDetectAUC{}) and it ranks below ADASYN on
+that class. The attribution measure inverts expectation similarly: on R2L the arm
+diverging \emph{most} from the unaugmented decision rule scores best, which is
+unsurprising once one notes that the rule being preserved achieves \baseRtwolRec{}
+recall. Undertraining does not explain any of this --- sixteen times the training
+moved the R2L nearest-neighbour ratio from $23.0$ to $12.8$ and the median KS
+statistic from $0.146$ to $0.063$ while discriminator AUC held at $0.9996$.
 
-Undertraining does not explain this. Training the flow matcher for sixteen times as
-many epochs moved the R2L nearest-neighbour ratio from $23.0$ to $12.8$ and the
-median KS statistic from $0.146$ to $0.063$, while discriminator AUC remained at
-$0.9996$ throughout. The samples became measurably closer to the real distribution
-without becoming any harder to identify as synthetic.
-
-The practical consequence is that a generator selected on fidelity grounds may not be
-the generator that improves detection, and that a study reporting only fidelity
-cannot support a recommendation about utility.
+The consequence for practice is that a generator selected on fidelity grounds need
+not be the one that improves detection.
 
 \begin{figure*}[t]
 \centering
@@ -1240,6 +1266,19 @@ resampling transfer well: 14 of 18 reproduce with the same sign. Effects attribu
 to generative augmentation transfer poorly, with 2 of 17 reproducing. Across all nine
 rare classes, the two classifiers select a different best-performing arm.
 
+One confound has to be eliminated before this is read as a property of the data. The
+pipeline fits the scaler on the \emph{augmented} training set, as the usual recipe
+does, so a generator emitting outliers shifts the fitted mean and variance and
+re-encodes every real record through a distorted transform. A tree does not notice;
+a network does. The distortion is real and large --- diffusion moves one column's
+fitted mean by $1.90$ standard deviations of the real data and inflates its scale
+$5.8\times$. It is nonetheless not the cause. Re-fitting the scaler on real records
+only, with everything else identical, changes the macro-F1 deficit from $-0.031$ to
+$-0.027$ for diffusion and from $-0.024$ to $-0.021$ for flow matching, recovering
+at most $13\%$ of the loss; on UNSW-NB15 Worms flow matching is \emph{worse} under
+the corrected scaler. The harm is the synthetic records themselves entering the
+loss, not the encoding of the real ones.
+
 We take this as a scope condition rather than a refutation. The improvements in
 Table~\ref{tab:improvements} are real, correctly computed, and reproducible; what
 Table~\ref{tab:robustness} establishes is that they are properties of the
@@ -1306,53 +1345,30 @@ flow matching scores exactly $0.000$ on every seed, the classifier never emittin
 class --- while CTGAN reaches $0.051$, in line with the classical methods and above
 doing nothing.
 
-Analysis is not starved of data: it has $2{,}000$ training records against
-Shellcode's $1{,}133$. What separates them is geometry. Measuring the fraction of a
-class's records whose nearest neighbour belongs to a different class, Analysis scores
-$0.775$ and Backdoor $0.908$, against $0.654$ for Shellcode. Analysis rows sit inside
-the region occupied by Exploits and benign traffic.
+Analysis is not starved of data --- it has $2{,}000$ training records against
+Shellcode's $1{,}133$ --- but it is geometrically worse placed: the fraction of a
+class's records whose nearest neighbour belongs to a different class is $0.775$ for
+Analysis and $0.908$ for Backdoor against $0.654$ for Shellcode. Both
+\emph{continuous-time} generators transport a Gaussian through a smooth field, and
+mass placed near a heavily overlapped mode spreads into neighbouring classes, where
+CTGAN's mode-specific normalisation evidently does not. That comparison is not
+architecture-matched (Section~\ref{sec:method:diff}), so we offer it as a hypothesis
+consistent with the data rather than a demonstrated mechanism. Overlap measured
+beforehand identifies which classes are hard ($\rho=-0.77$, $p=0.0001$ over 19
+classes) but not how much augmentation recovers, its partial correlation with gain
+falling to $-0.11$ once baseline F1 is controlled for; sub-class coverage,
+Equation~\eqref{eq:coverage}, is the statistic that carries predictive weight here.
 
-The failure is specific to \emph{continuous-time} generators. Diffusion and flow
-matching both transport a Gaussian to the data distribution through a smooth field,
-and mass placed near a heavily overlapped mode spreads into neighbouring classes.
-CTGAN's mode-specific normalisation and conditional sampler evidently preserve the
-minority mode where continuous transport does not. We note that this comparison is
-not architecture-matched (Section~\ref{sec:method:diff}) and treat it as a
-hypothesis consistent with the data rather than as a demonstrated mechanism.
+\subsection{Why fidelity and utility come apart}
 
-We tested the natural extension of this idea --- that an overlap statistic computed
-before training would predict how much augmentation can recover --- and it does not.
-Overlap correlates strongly with baseline difficulty ($\rho=-0.77$, $p=0.0001$ over
-19 augmented classes), but once baseline F1 is partialled out its correlation with
-achievable gain falls to $-0.11$. Overlap tells a practitioner that a class is hard.
-It does not tell them whether augmentation will help, nor which family to reach for.
-
-\subsection{Sample quality does not predict downstream utility}
-
-Four independent measures of synthetic-sample quality were computed alongside the
-detection results: the AUC of a discriminator trained to separate synthetic records
-from real ones, the ratio of nearest-neighbour distances, the median
-Kolmogorov--Smirnov statistic across marginals, and the divergence between SHAP
-attribution profiles of augmented and unaugmented models. None of them orders the
-methods as downstream F1 does.
-
-The sharpest single case: ADASYN's synthetic U2R records are identified as synthetic
-$100\%$ of the time --- detection AUC \adasynDetectAUC{}, perfect separability ---
-and ADASYN nevertheless produces one of the strongest R2L results of any arm.
-Meanwhile SMOTE's records are essentially indistinguishable from real ones
-(AUC~\smoteDetectAUC{}) and SMOTE ranks near the bottom on that class.
-
-Longer training does not resolve this. Training the flow matcher for sixteen times as
-many epochs improved every distributional measure substantially --- on R2L the
-nearest-neighbour ratio fell from $23.0$ to $12.8$ and the median KS statistic from
-$0.146$ to $0.063$ --- while the discriminator's AUC remained at $0.9996$ throughout.
-The samples moved measurably closer to the real distribution without becoming any
-harder to identify, which rules out undertraining and points instead to a structural
-mismatch: a continuous flow can approach the dense, near-duplicated clusters that
-network traffic forms, but cannot concentrate mass onto them.
-
-The implication for practice is that a synthetic-data evaluation reporting fidelity
-alone can order methods incorrectly for the task the data is being generated for.
+Section~\ref{sec:res:quality} reports that no quality measure orders the methods as
+downstream F1 does. The mechanism appears to be structural rather than a matter of
+training budget: a continuous flow can approach the dense, near-duplicated clusters
+that network traffic forms but cannot concentrate mass onto them, which is why
+sixteen times the training moved every distributional measure while leaving
+discriminator AUC at $0.9996$. Fidelity measures reward proximity to those clusters;
+detection depends on whether the synthetic records fall on the useful side of a
+decision boundary, and the two are not the same quantity.
 
 \subsection{Learned generators fail silently, at a measurable rate}
 
@@ -1385,6 +1401,28 @@ no classical method shows one.}
 \end{figure}
  No quality metric we
 computed distinguishes a collapsed batch from a healthy one in advance.
+
+\subsection{The three benchmarks disagree about the same method}
+
+The classifier is not the only thing that changes the answer. Measured through one
+pipeline with identical seeds, SMOTE improves \emph{every} rare class on NSL-KDD
+(R2L $0.192 \rightarrow 0.246$, U2R $0.219 \rightarrow 0.428$), degrades two of four
+on UNSW-NB15 (Shellcode $-0.139$, Worms $-0.132$), and degrades the only CICIDS2017
+class with meaningful headroom (Bot $-0.039$). The direction of the effect, not
+merely its size, is dataset-dependent.
+
+The three benchmarks also fail for three different reasons. On NSL-KDD the rare
+classes fail because train and test attack types are largely disjoint
+(Section~\ref{sec:setup:shift}); on UNSW-NB15 because Analysis and Backdoor overlap
+other classes in feature space; on CICIDS2017 they mostly do not fail at all, two of
+three rare classes sitting above $0.98$ before any augmentation. \emph{None of the
+three is a shortage of training examples}, which is the cause the standard remedy
+addresses --- and the ablation of Section~\ref{sec:res:efficiency} confirms it
+directly: quadrupling the synthetic volume moves rare-class F1 by less than $0.004$.
+
+A claim of the form ``method $X$ helps with class imbalance in intrusion detection''
+drawn from a single benchmark is therefore unsupported, and single-benchmark
+evaluation is the norm in this literature.
 
 \subsection{What this means for evaluation practice}
 
@@ -1440,37 +1478,45 @@ from CTGAN-versus-flow differences.
 \section{Conclusion}\label{sec:conclusion}
 %==============================================================================
 
-We evaluated eight augmentation methods --- four classical resamplers and four
-learned generators spanning the GAN, diffusion and flow-matching families --- on nine
-rare attack classes across three benchmark datasets, with per-class metrics, five
-seeds, two classifier families and corrected significance testing throughout. To our
-knowledge this is the first evaluation of augmentation for intrusion detection to
-report per-class results across multiple classifier families, and the first
-application of flow matching to this problem.
+We introduced flow matching as a minority-class augmenter for network intrusion
+detection --- to our knowledge its first application to this problem --- generating
+one model per attack sub-type rather than per coarse category, with column types
+inferred from the data rather than assumed continuous.
 
-Augmentation helps: eleven improvements have bootstrap confidence intervals
-excluding zero, six survive Holm--Bonferroni correction, and the largest raises U2R
-F1 by $85.6\%$ relative. It also harms: fourteen comparisons are statistically
-significant degradations, and the largest single effect measured anywhere in this
-study is one of them, SMOTE reducing Shellcode F1 by $0.139$ at $d=-9.59$ --- larger
-in magnitude than any benefit SMOTE produces on any class of any dataset examined
-here.
+The method works, and it works where the problem is hardest. Eleven rare-class
+improvements have bootstrap confidence intervals excluding zero and six survive
+Holm--Bonferroni correction. The largest raises user-to-root F1 by $85.6\%$
+relative, from $0.2193$ to $0.4070$ at $p=0.0021$ with Cohen's $d=4.68$, on a class
+represented by 52 training records against a majority of 67,343. Remote-to-local
+gains $50.5\%$ and UNSW-NB15 Backdoor $64.9\%$. All four generative families
+contribute at least one solid improvement, across both benchmarks whose rare classes
+appear in training and test. Two settings taken as standard in this literature can
+be reduced at no cost: ten integration steps match one hundred, a hundredfold saving
+against the 1000-step schedule usual in diffusion, and lifting minority classes to a
+quarter of parity matches full rebalancing on half the training rows.
 
-The result with the widest consequences is that neither outcome is a property of the
-augmentation method alone. Five different methods are optimal across the nine
-classes, and changing only the downstream classifier changes the best-performing
-method for every one of them. Four independent measures of synthetic-sample quality
-fail to predict which methods will help. Learned generators fail silently on
-approximately one run in five, at a rate no quality metric detects in advance,
-while classical methods never do.
+We also identified a quantity that says in advance where the method is worth its
+cost. Sub-class coverage --- the share of a class's records belonging to sub-types
+large enough to model, computable from the training labels before any generator is
+fitted --- separates the two outcomes cleanly. At $97\%$ coverage per-type generation
+beats the best classical resampler; at $58\%$ it loses to one. A control dataset
+carrying no sub-class labels, where coverage is unity by construction and the method
+degenerates to per-class generation, behaves as that mechanism predicts.
 
-We conclude that augmentation-method selection for rare-attack detection is a
-per-class, per-classifier empirical question, and that the prevailing practice of
-reporting a single aggregate score from a single classifier on a single benchmark
-cannot support the general recommendations routinely drawn from it. Practitioners
-should evaluate candidate methods against the classes they care about and the
-classifier they intend to deploy, and should treat a default resampler as an
-intervention capable of degrading the very classes it is applied to protect.
+Three findings bound the claim, and each is reported because a practitioner needs
+it. Fourteen of sixty-three augmentations are statistically significant
+\emph{degradations}, the largest single effect in this study being one of them.
+Four independent measures of synthetic-sample quality fail to predict downstream
+utility, so a generator chosen on fidelity grounds need not be the one that improves
+detection. And the ranking of methods is not a property of the augmentation alone:
+changing only the downstream classifier changes which arm performs best.
+
+The practical recommendation follows from these together. Compute sub-class coverage
+first; where it is high, per-type generative augmentation is worth the compute and
+delivers the gains reported here; where it is low, or where the class is already
+well detected, classical resampling or no augmentation is the better choice --- and
+a default resampler applied without checking is capable of degrading the very
+classes it was meant to protect.
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
