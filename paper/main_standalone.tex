@@ -136,7 +136,9 @@ machine learning are now standard components of enterprise security monitoring,
 and the published accuracy figures attached to them are remarkable. Models
 evaluated on the common benchmarks routinely report overall accuracy above
 99\,\% \cite{alsubaei2025smart, yang2025diffids}. Read alongside the operational
-reality that intrusions continue to succeed, those figures invite a question
+reality that intrusions continue to succeed---a gap Sommer and Paxson
+identified as structural to this problem rather than incidental
+\cite{sommer2010outside}, those figures invite a question
 that the aggregate metric cannot answer: accuracy on \emph{what}?
 
 The answer is uncomfortable. Network traffic is dominated by benign flows, and
@@ -200,8 +202,7 @@ it has not demonstrated that \emph{generative} augmentation helps, which is the
 claim being made. Establishing the latter requires the classical resampler as a
 control, and that control is frequently absent.
 
-Second, the evaluation frequently omits the information needed to assess a
-rare-class claim. Per-class support is often unreported, so a reader cannot
+Second, the evaluation frequently omits the information needed to assess a rare-class claim. Arp et al.\ catalogue this and related pitfalls across thirty security papers, finding unrealistic baselines and inappropriate handling of class imbalance among the most common~\cite{arp2022dos}. Per-class support is often unreported, so a reader cannot
 distinguish a stable estimate from one computed over a handful of test samples.
 Single-run results are common, which conflates method effect with seed variance.
 Both omissions are consequential precisely in the regime the papers claim to
@@ -332,8 +333,7 @@ states what they do not establish, and Section~\ref{sec:conclusion} concludes.
 The dominant response to rare-attack detection is to rebalance the training
 distribution. SMOTE~\cite{chawla2002smote} synthesises minority records by
 interpolating between a record and its nearest same-class neighbours;
-ADASYN~\cite{he2008adasyn} biases that sampling toward records whose neighbourhoods
-are dominated by other classes. Both are two decades old, both are available in one
+ADASYN~\cite{he2008adasyn} biases that sampling toward records whose neighbourhoods are dominated by other classes, and Borderline-SMOTE~\cite{han2005borderline} restricts synthesis to samples near the decision boundary. Johnson and Khoshgoftaar survey the wider family and its deep-learning successors~\cite{johnson2019survey}. Both are two decades old, both are available in one
 line from standard libraries, and both appear in a large fraction of intrusion
 detection papers reporting improved rare-class performance.
 
@@ -349,16 +349,15 @@ to protect.
 \subsection{Generative models for tabular data}
 
 Interpolation has increasingly been replaced by learned generators.
-CTGAN~\cite{xu2019modeling} adapts adversarial training to tabular data through
+CTGAN~\cite{xu2019modeling} adapts adversarial training~\cite{goodfellow2014gan}
+to tabular data through
 mode-specific normalisation of continuous columns and a conditional sampler that
 addresses category imbalance. Denoising diffusion~\cite{ho2020denoising} was adapted
 to the tabular setting by TabDDPM~\cite{kotelnikov2023tabddpm}, which applies
 Gaussian diffusion to numerical fields and multinomial diffusion to categorical and
-binary ones --- an explicit recognition that mixed-type records cannot be treated as
-points in a Euclidean space.
+binary ones --- an explicit recognition that mixed-type records cannot be treated as points in a Euclidean space. Borisov et al.\ survey the broader difficulty of applying deep architectures to tabular data~\cite{borisov2024deep}.
 
-Flow matching~\cite{lipman2023flow} trains a velocity field by regression against a
-prescribed probability path, avoiding both adversarial dynamics and long ancestral
+Flow matching~\cite{lipman2023flow}, developed alongside rectified flow~\cite{liu2023rectified}, trains a velocity field by regression against a prescribed probability path, avoiding both adversarial dynamics and long ancestral
 sampling chains. It is widely used in continuous domains but, to our knowledge, has
 not previously been applied to intrusion detection augmentation. Its practical claim
 over diffusion --- comparable sample quality at far fewer network evaluations --- is
@@ -492,7 +491,7 @@ Four are learned generators, one per major family.
 
 \begin{itemize}
 \item \textbf{CTGAN}~\cite{xu2019modeling}, the published implementation, with its
-      mode-specific normalisation, conditional sampler and PacGAN discriminator.
+      mode-specific normalisation, conditional sampler and PacGAN discriminator~\cite{lin2018pacgan}.
 \item \textbf{Diffusion}, described in Section~\ref{sec:method:diff}.
 \item \textbf{Flow matching}, described in Section~\ref{sec:method:fm}.
 \item \textbf{Per-type flow matching}, described in Section~\ref{sec:method:pertype}.
@@ -634,7 +633,7 @@ are shared by construction rather than by intention.
 
 The forward process uses a cosine schedule,
 $\bar{\alpha}_t = \cos^2\!\bigl(\tfrac{\pi}{2}\cdot\tfrac{t/T+s}{1+s}\bigr)$ with
-$s=0.008$, and sampling uses DDIM striding at the same step count as flow matching,
+$s=0.008$, and sampling uses DDIM striding~\cite{song2021ddim} at the same step count as flow matching,
 so the two arms cost the same number of network evaluations per record. Full
 1000-step ancestral sampling was not tractable at CICIDS2017 scale and was not run;
 we state this rather than leave it implied.
@@ -665,8 +664,10 @@ silently discard exactly the rare attacks under study.
 
 \subsection{Datasets}
 
-Three benchmarks are used, summarised in Table~
-\ref{tab:datasets} and chosen to
+Three benchmarks are used, summarised in Table~\ref{tab:datasets}. Surveys of the
+available options and their limitations are given by Ring et
+al.~\cite{ring2019survey} and, more recently, by Goldschmidt and
+Chud\'{a}~\cite{goldschmidt2025network}. Ours are chosen to
 match those of the work this study takes as its
 reference point~\cite{alsubaei2025smart} and to span three decades of network
 telemetry.
@@ -687,8 +688,7 @@ $70/30$ split on the fine-grained label ($1{,}979{,}513$ / $848{,}363$ records, 
 features). We repair two defects in the published files: \texttt{Flow Bytes/s} and
 \texttt{Flow Packets/s} carry infinities where the flow duration is zero, and
 several web-attack labels are mis-encoded, appearing with a replacement character
-where a hyphen was intended. Records with non-finite features are dropped and the
-labels are normalised.
+where a hyphen was intended. Records with non-finite features are dropped and the labels are normalised. These defects, along with others in the flow construction and labelling of this dataset, have been documented independently~\cite{engelen2021troubleshooting,lanvin2023faulty}; we apply the repairs relevant to the features we use, and note that a corrected release exists.
 
 % ---- inlined from tables/tab_datasets.tex ----
 \begin{table}[t]
@@ -756,8 +756,7 @@ imbalance.
 
 Two classifiers are used, chosen to match the reference work, which evaluates with
 both a gradient-boosted tree and a neural network~\cite{alsubaei2025smart}, and
-because they sit at opposite ends of the inductive-bias axis that should matter to
-synthetic data. A tree is piecewise-constant and invariant to monotone rescaling, so
+because they sit at opposite ends of the inductive-bias axis that should matter to synthetic data. That gradient-boosted trees remain hard to beat on tabular problems is well established~\cite{grinsztajn2022why}; the difference in inductive bias is precisely why we expect augmentation to affect the two differently. A tree is piecewise-constant and invariant to monotone rescaling, so
 a synthetic record falling inside an existing leaf merely reweights it. A network
 interpolates smoothly and is sensitive to feature scale, so the same record displaces
 a decision boundary it must then fit.
@@ -789,7 +788,7 @@ on NSL-KDD the unaugmented pipeline reaches accuracy \baseAcc{} at macro-F1
 Every configuration is repeated over five seeds, which perturb both synthetic
 sampling and classifier fitting. Comparisons against the unaugmented arm use paired
 $t$-tests with Holm--Bonferroni correction applied within each (dataset, class)
-family, Cohen's $d$, and $10{,}000$-resample bootstrap confidence intervals.
+family, Cohen's $d$, and $10{,}000$-resample bootstrap confidence intervals~\cite{efron1979bootstrap}; the correction follows Holm's sequentially rejective procedure~\cite{holm1979simple}.
 
 We report a limit rather than working around it. The Wilcoxon signed-rank statistic
 over $n=5$ paired samples admits $2^5=32$ sign assignments, so its smallest
