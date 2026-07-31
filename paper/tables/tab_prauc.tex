@@ -1,0 +1,25 @@
+\begin{table}[t]
+\centering
+\caption{Each improvement of Table~\ref{tab:improvements} against threshold-free ranking quality. F1 is evaluated at the argmax, so a method that widens its decision region gains F1 without ranking better; PR-AUC does not depend on that threshold. Agreement between the two columns ($\checkmark$) indicates a genuine gain in ranking quality.}
+\label{tab:prauc}
+\begin{tabular}{llrrc}
+\toprule
+Class & Method & $\Delta$F1 & $\Delta$PR-AUC & Agree \\
+\midrule
+Backdoor & Flow matching & +0.0440 & \textbf{+0.0176} & $\checkmark$ \\
+Backdoor & Per-type flow & +0.0442 & \textbf{+0.0173} & $\checkmark$ \\
+Shellcode & CTGAN & +0.0449 & \textbf{+0.0961} & $\checkmark$ \\
+Shellcode & Diffusion & +0.0218 & \textbf{+0.0651} & $\checkmark$ \\
+Worms & Flow matching & +0.0419 & \textbf{+0.0769} & $\checkmark$ \\
+\midrule
+r2l & Diffusion & +0.0971 & -0.1489 & --- \\
+r2l & Flow matching & +0.0459 & -0.0564 & --- \\
+r2l & Per-type flow & +0.0712 & \textbf{+0.0339} & $\checkmark$ \\
+u2r & Diffusion & +0.1878 & -0.0626 & --- \\
+u2r & Flow matching & +0.1677 & -0.1498 & --- \\
+u2r & Per-type flow & +0.0591 & \textbf{+0.0230} & $\checkmark$ \\
+\midrule
+\multicolumn{5}{l}{Both metrics agree on 7 of 11 improvements.} \\
+\bottomrule
+\end{tabular}
+\end{table}

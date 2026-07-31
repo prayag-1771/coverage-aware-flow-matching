@@ -181,6 +181,56 @@ def table_efficiency() -> str:
     return "\n".join(lines)
 
 
+def table_prauc() -> str:
+    """Each claimed improvement against the threshold-free metric.
+
+    F1 is computed at the argmax, so a method that shifts the decision boundary
+    outward gains F1 by flagging more records without ranking them any better.
+    PR-AUC does not depend on that threshold. Reporting both is the only way to tell
+    the two apart, and the pipeline has computed PR-AUC for every class and run from
+    the outset -- omitting it would leave the paper's headline metric-dependent
+    without saying so.
+    """
+    sig = pd.read_csv(RESULTS / "significance.csv")
+    w = sig[(sig.arm.isin(GENERATIVE)) & (sig.mean_diff > 0)
+            & (sig.ci_excludes_zero)].sort_values(
+                ["dataset", "class"], ascending=[False, True])
+
+    lines = [
+        r"\begin{table}[t]", r"\centering",
+        r"\caption{Each improvement of Table~\ref{tab:improvements} against "
+        r"threshold-free ranking quality. F1 is evaluated at the argmax, so a method "
+        r"that widens its decision region gains F1 without ranking better; PR-AUC "
+        r"does not depend on that threshold. Agreement between the two columns "
+        r"($\checkmark$) indicates a genuine gain in ranking quality.}",
+        r"\label{tab:prauc}",
+        r"\begin{tabular}{llrrc}", r"\toprule",
+        r"Class & Method & $\Delta$F1 & $\Delta$PR-AUC & Agree \\", r"\midrule",
+    ]
+    agree = 0
+    prev = None
+    for _, r in w.iterrows():
+        pc = pd.read_csv(RESULTS / f"{STEMS[r.dataset]}_per_class.csv")
+        s = pc[pc["class"] == r["class"]]
+        base = s[s.arm == "none"]["pr_auc"].mean()
+        arm = s[s.arm == r.arm]["pr_auc"].mean()
+        d = arm - base
+        ok = d > 0
+        agree += ok
+        if prev is not None and r.dataset != prev:
+            lines.append(r"\midrule")
+        prev = r.dataset
+        mark = r"$\checkmark$" if ok else "---"
+        cell = f"\\textbf{{{d:+.4f}}}" if ok else f"{d:+.4f}"
+        lines.append(f"{r['class']} & {PRETTY[r.arm]} & {r.mean_diff:+.4f} & "
+                     f"{cell} & {mark} \\\\")
+    lines += [r"\midrule",
+              f"\\multicolumn{{5}}{{l}}{{Both metrics agree on {agree} of "
+              f"{len(w)} improvements.}} \\\\",
+              r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    return "\n".join(lines)
+
+
 def table_coverage() -> str:
     """Sub-class coverage against the outcome it predicts.
 
@@ -516,6 +566,7 @@ def main() -> None:
         "tab_hyper.tex": table_hyperparameters(),
         "tab_improvements.tex": table_improvements(),
         "tab_efficiency.tex": table_efficiency(),
+        "tab_prauc.tex": table_prauc(),
         "tab_coverage.tex": table_coverage(),
         "tab_headtohead.tex": table_head_to_head(),
         "tab_robustness.tex": table_robustness(),

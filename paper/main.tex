@@ -97,9 +97,12 @@ the standard remedy. We introduce flow matching as an augmenter for this problem
 to our knowledge its first application here --- generating one model per attack
 sub-type rather than per coarse category, with column types inferred from the data.
 It yields eleven statistically significant rare-class improvements across three
-benchmark datasets, the largest raising user-to-root F1 by $85.6\%$ relative
-($p=0.002$, Cohen's $d=4.68$), using ten integration steps: a hundredfold fewer
-network evaluations per record than the schedule standard in diffusion. We further
+benchmark datasets, of which seven are confirmed by threshold-free ranking quality as
+well as by F1 --- and sub-class generation is the only generative variant confirmed on
+both metrics for every class it improves. Gains reach $64.9\%$ relative on UNSW-NB15
+Backdoor and $85.6\%$ on NSL-KDD user-to-root ($p=0.002$, Cohen's $d=4.68$), at ten
+integration steps: a hundredfold fewer network evaluations per record than the
+schedule standard in diffusion. We further
 identify a quantity that predicts where the method succeeds. \emph{Sub-class
 coverage} --- the share of a class's records belonging to sub-types large enough to
 model --- separates the two outcomes cleanly: at $97\%$ coverage per-type generation
@@ -812,6 +815,38 @@ records). Six clear Holm--Bonferroni correction at $p<0.05$ despite the correcti
 being applied within each (dataset, class) family of seven simultaneous comparisons,
 which is the conservative choice.
 
+\subsubsection*{Which of these are gains in ranking, and which in threshold}
+
+F1 is evaluated at the argmax, so a method that widens a class's decision region
+gains F1 by flagging more records without ordering them any better. Because that
+distinction matters to a practitioner choosing an operating point, we report each
+improvement of Table~\ref{tab:improvements} against PR-AUC, which does not depend on
+the threshold. Table~\ref{tab:prauc} gives the comparison.
+
+Seven of the eleven improve both metrics. The five on UNSW-NB15 do so without
+exception, CTGAN gaining $0.096$ PR-AUC on Shellcode and flow matching $0.077$ on
+Worms --- these are gains in ranking quality, not in threshold placement.
+
+On NSL-KDD the picture separates by method. Per-type flow matching improves both
+metrics on both classes, the only generative arm to do so there. Diffusion and
+whole-class flow matching improve F1 while PR-AUC falls, by as much as $0.150$ on
+U2R. The mechanism is visible in the underlying rates: diffusion's R2L precision
+falls from $0.974$ to $0.624$ while recall rises from \baseRtwolRec{} to $0.190$. It
+flags substantially more R2L traffic, catches more genuine attacks, and is wrong more
+often; F1 rewards that trade and PR-AUC does not.
+
+We therefore state the scope of the NSL-KDD result precisely. On a benchmark whose
+effective rare-class training signal is roughly one-tenth its nominal size
+(Section~\ref{sec:setup:shift}), whole-class continuous generation buys recall at the
+cost of precision rather than better discrimination, and a deployment sensitive to
+false-alarm volume should not read those two rows as improvements.
+\emph{Sub-class generation is the exception}, improving discrimination itself on both
+classes --- which is consistent with the coverage mechanism of
+Section~\ref{sec:res:pertype}: modelling the attack types that actually occur
+produces a better-ordered decision function, not merely a wider one.
+
+\input{tables/tab_prauc}
+
 Relative gains are large where they matter most. The three biggest --- U2R at
 $+85.6\%$ and $+76.5\%$, R2L at $+50.5\%$ --- occur on the two classes this
 literature most often cites as unsolved, and UNSW-NB15 Backdoor gains $64.9\%$ from
@@ -1227,13 +1262,20 @@ one model per attack sub-type rather than per coarse category, with column types
 inferred from the data rather than assumed continuous.
 
 The method works, and it works where the problem is hardest. Eleven rare-class
-improvements have bootstrap confidence intervals excluding zero and six survive
-Holm--Bonferroni correction. The largest raises user-to-root F1 by $85.6\%$
-relative, from $0.2193$ to $0.4070$ at $p=0.0021$ with Cohen's $d=4.68$, on a class
-represented by 52 training records against a majority of 67,343. Remote-to-local
-gains $50.5\%$ and UNSW-NB15 Backdoor $64.9\%$. All four generative families
-contribute at least one solid improvement, across both benchmarks whose rare classes
-appear in training and test. Two settings taken as standard in this literature can
+improvements have bootstrap confidence intervals excluding zero, six survive
+Holm--Bonferroni correction, and seven are confirmed by threshold-free ranking
+quality in addition to F1. The largest raises user-to-root F1 by $85.6\%$ relative,
+from $0.2193$ to $0.4070$ at $p=0.0021$ with Cohen's $d=4.68$, on a class
+represented by 52 training records against a majority of 67,343; UNSW-NB15 Backdoor
+gains $64.9\%$ and remote-to-local $50.5\%$. All four generative families contribute
+at least one improvement, across both benchmarks whose rare classes appear in
+training and test.
+
+Sub-class generation is the variant that holds up most completely. It is the only
+generative arm to improve both F1 and PR-AUC on every NSL-KDD class it helps, where
+whole-class continuous generation instead trades precision for recall --- a
+distinction that matters to any deployment sensitive to false-alarm volume, and one
+that a study reporting F1 alone cannot make. Two settings taken as standard in this literature can
 be reduced at no cost: ten integration steps match one hundred, a hundredfold saving
 against the 1000-step schedule usual in diffusion, and lifting minority classes to a
 quarter of parity matches full rebalancing on half the training rows.
