@@ -360,7 +360,7 @@ one we test directly.
 
 Applications of generative models to intrusion datasets are numerous, and several
 recent works train a separate generator per attack category rather than a single
-conditional model. Diffusion has been applied to this problem specifically, including work using the benchmarks studied here~\cite{yang2025diffids,dift2025diffusion}, and conditional GANs continue to be proposed for minority-class synthesis~\cite{midsgan2025minority}. A separate line of
+conditional model. Diffusion has been applied to this problem specifically, both on the benchmarks studied here~\cite{yang2025diffids} and on IoT-specific traffic~\cite{wang2025dift}. Conditional GANs continue to be proposed for the same purpose: MIDS-GAN reports recall gains on NSL-KDD and UNSW-NB15 across four of the rare classes we also study~\cite{klinkhamhom2025midsgan}. That work reports recall alone, from single runs, under one classifier, which is the reporting pattern this paper sets out to test rather than a criticism of the method itself. A separate line of
 work examines how far intrusion detection models transfer between datasets at
 all~\cite{cantone2024machine}, finding substantial degradation; our observation that
 the three benchmarks disagree on the direction of the SMOTE effect is a
@@ -656,7 +656,7 @@ $70/30$ split on the fine-grained label ($1{,}979{,}513$ / $848{,}363$ records, 
 features). We repair two defects in the published files: \texttt{Flow Bytes/s} and
 \texttt{Flow Packets/s} carry infinities where the flow duration is zero, and
 several web-attack labels are mis-encoded, appearing with a replacement character
-where a hyphen was intended. Records with non-finite features are dropped and the labels are normalised. These defects, along with others in the flow construction and labelling of this dataset, have been documented independently~\cite{engelen2021troubleshooting,lanvin2023faulty}; we apply the repairs relevant to the features we use, and note that a corrected release exists.
+where a hyphen was intended. Records with non-finite features are dropped and the labels are normalised. Both are instances of a wider problem: Engelen et al.\ document further defects in this dataset's flow construction and labelling and publish a corrected release~\cite{engelen2021troubleshooting}, and Dube argues that the summarised flow representation is itself a poor basis for classification irrespective of such defects~\cite{dube2024faulty}. We apply the repairs relevant to the features we use and return to the second point in Section~\ref{sec:limitations}.
 
 \input{tables/tab_datasets}
 
@@ -1230,6 +1230,8 @@ should not be read as a claim about neural networks on tabular data.
 partitions; CICIDS2017 uses one stratified split with a fixed seed. Our confidence
 intervals therefore capture augmentation and classifier variability but not
 split variability on that dataset.
+
+\textbf{Summarised flow features.} All three benchmarks provide pre-computed flow statistics rather than raw traffic. Dube argues that this representation limits what any classifier trained on it can achieve~\cite{dube2024faulty}. Our comparisons are internally consistent, since every arm sees the same features, but absolute performance is bounded by the representation and would not transfer unchanged to a system working from packet captures.
 
 \textbf{Single-machine compute.} All experiments run on one consumer GPU. Generator
 capacity, training length and sampling steps were chosen to fit that budget, and a
