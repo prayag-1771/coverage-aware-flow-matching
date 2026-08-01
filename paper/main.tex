@@ -327,7 +327,7 @@ states what they do not establish, and Section~\ref{sec:conclusion} concludes.
 The dominant response to rare-attack detection is to rebalance the training
 distribution. SMOTE~\cite{chawla2002smote} synthesises minority records by
 interpolating between a record and its nearest same-class neighbours;
-ADASYN~\cite{he2008adasyn} biases that sampling toward records whose neighbourhoods are dominated by other classes, Both remain the practical default in intrusion detection: recent work continues to build pipelines around them~\cite{ahsan2023addressing,gmmadasyn2024overcoming}. Both are two decades old, both are available in one
+ADASYN~\cite{he2008adasyn} biases that sampling toward records whose neighbourhoods are dominated by other classes, Both remain the practical default in intrusion detection: recent work continues to build pipelines around them~\cite{abdelkhalek2023addressing,gmmadasyn2024overcoming}. Both are two decades old, both are available in one
 line from standard libraries, and both appear in a large fraction of intrusion
 detection papers reporting improved rare-class performance.
 
@@ -400,7 +400,7 @@ need not be the method that best supplements an existing one. We take that work 
 the reference point for fidelity benchmarking and address the per-class utility
 question it leaves open.
 
-Beyond intrusion detection, a broader literature evaluates synthetic tabular data by training downstream models on it, and reports that no single generator dominates across tasks~\cite{fonseca2025survey,chowdhury2025synthetic}. Our contribution to that discussion is a negative result specific to
+Beyond intrusion detection, a broader literature evaluates synthetic tabular data by training downstream models on it, and reports that no single generator dominates across tasks~\cite{stoian2025survey,challagundla2025synthetic}. Our contribution to that discussion is a negative result specific to
 the rare-class setting: across four independent quality measures --- discriminator
 detectability, nearest-neighbour distance, marginal divergence, and attribution
 similarity~\cite{lundberg2017unified} --- none orders the methods as downstream
@@ -410,7 +410,7 @@ rare-class F1 does.
 
 The observation that some classes resist augmentation regardless of how much data is
 supplied connects to the classification-complexity literature, which characterises
-problem difficulty through geometric properties of the feature space. Recent surveys treat class overlap as the mechanism that makes imbalance harmful~\cite{dablain2024overlap}, and new complexity measures target the multi-class imbalanced setting specifically~\cite{complexity2024multiclass}. We compute two such measures --- the leave-one-out
+problem difficulty through geometric properties of the feature space. Recent surveys treat class overlap as the mechanism that makes imbalance harmful~\cite{kumar2024overlap}, and new complexity measures target the multi-class imbalanced setting specifically~\cite{han2024complexity}. We compute two such measures --- the leave-one-out
 nearest-neighbour error and the $k$-neighbourhood class purity --- and report both the
 strong relationship they hold with baseline difficulty and the absence of any
 relationship with achievable augmentation gain once that difficulty is accounted for.
