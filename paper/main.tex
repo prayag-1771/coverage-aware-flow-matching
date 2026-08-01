@@ -1,30 +1,28 @@
 %==============================================================================
-% Flow-Matching Augmentation for Rare Attack Detection in NIDS
-% Introduction section draft.
+% Coverage-Aware Flow Matching for Rare-Attack Detection
 %
-% Compile:  pdflatex main && bibtex main && pdflatex main && pdflatex main
+% Formatted for Scientific Reports (Nature Portfolio): single column, Methods after
+% Discussion, prior work folded into the Introduction, abstract one unreferenced
+% paragraph. Compile: pdflatex main && bibtex main && pdflatex main && pdflatex main
 %
-% Numbers that depend on model runs are defined as macros in the block below.
-% They will change when experiments are re-run; edit them in one place rather
-% than hunting through the prose. Values marked FIXED are properties of the
-% datasets and will not change.
+% Numbers that depend on model runs are macros; see the block below.
 %==============================================================================
 
-% [conference], not [journal]: the supplied author block uses \IEEEauthorblockN /
-% \IEEEauthorblockA / \and, which only lay out side by side in conference mode.
-% Note this changes the whole document format -- if the target is IEEE Access,
-% switch to ieeeaccess.cls, which has its own byline convention again.
-\documentclass[conference]{IEEEtran}
+\documentclass[11pt]{article}
 
+\usepackage[a4paper,margin=2.5cm]{geometry}
 \usepackage{amsmath}
-% amssymb, not just amsmath: \mathbb lives here. Without it the blackboard-bold
-% expectation operator in Eq. (3) is an undefined control sequence and the build
-% produces no PDF at all.
 \usepackage{amssymb}
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{url}
 \usepackage[hidelinks]{hyperref}
+\usepackage{authblk}
+\usepackage[labelfont=bf,font=small]{caption}
+\usepackage{times}
+
+\renewcommand{\abstractname}{\vspace{-1em}}
+\setlength{\affilsep}{0.4em}
 
 %------------------------------------------------------------------------------
 % Volatile numbers -- update after each experimental re-run.
@@ -62,72 +60,49 @@
 \newcommand{\rtwolEffective}{105}
 \newcommand{\rtwolEffectiveRatio}{1{:}641}
 
+
 \begin{document}
 
-\title{Coverage-Aware Flow Matching for\\Rare-Attack Detection}
+\title{\textbf{Coverage-Aware Flow Matching for Rare-Attack Detection}}
 
-% Author block, verbatim as supplied: side-by-side blocks with the affiliation under
-% each name, which is IEEEtran's conference interface (\IEEEauthorblockN /
-% \IEEEauthorblockA / \and). It needs \documentclass[conference]; under [journal] the
-% same markup collapses to a single centred byline with the affiliations pushed into
-% footnotes, which is what the earlier draft produced.
-\author{
-\IEEEauthorblockN{1\textsuperscript{st} Prayag Sharma}
-\IEEEauthorblockA{
-\textit{School of Computer Science and Engineering} \\
-\textit{Vellore Institute of Technology} \\
-Chennai, India \\
-prayag.sharma2024@vitstudent.ac.in
-}
-\and
-\IEEEauthorblockN{5\textsuperscript{th} Ravi Tiwari}
-\IEEEauthorblockA{
-\textit{School of Electronics Engineering} \\
-\textit{Vellore Institute of Technology} \\
-Chennai, India \\
-ravi.tiwari@vit.ac.in
-}
-}
+\author[1]{Prayag Sharma}
+\author[2]{Ravi Tiwari}
+\affil[1]{School of Computer Science and Engineering, Vellore Institute of
+Technology, Chennai, India}
+\affil[2]{School of Electronics Engineering, Vellore Institute of Technology,
+Chennai, India}
+\affil[ ]{\texttt{prayag.sharma2024@vitstudent.ac.in},
+\texttt{ravi.tiwari@vit.ac.in}}
 
+\date{}
 \maketitle
 
 \begin{abstract}
-Intrusion detection systems miss rare attack classes, and synthetic augmentation is
-the standard remedy. We introduce flow matching as an augmenter for this problem ---
-to our knowledge its first application here --- generating one model per attack
-sub-type rather than per coarse category, with column types inferred from the data.
-It yields eleven statistically significant rare-class improvements across three
-benchmark datasets, of which seven are confirmed by threshold-free ranking quality as
-well as by F1 --- and sub-class generation is the only generative variant confirmed on
-both metrics for every class it improves. Gains reach $64.9\%$ relative on UNSW-NB15
-Backdoor and $85.6\%$ on NSL-KDD user-to-root ($p=0.002$, Cohen's $d=4.68$), at ten
-integration steps: a hundredfold fewer network evaluations per record than the
-schedule standard in diffusion. We further
-identify a quantity that predicts where the method succeeds. \emph{Sub-class
-coverage} --- the share of a class's records belonging to sub-types large enough to
-model --- separates the two outcomes cleanly: at $97\%$ coverage per-type generation
-beats the best classical resampler, at $58\%$ it loses to one, and a control dataset
-without sub-class labels, where coverage is unity by construction, confirms the
-mechanism. Because existing comparisons in this area use binary labels, aggregate
-metrics or a single classifier, we also report the per-class evaluation they omit:
-eight methods, nine individually named rare classes, five seeds, two classifier
-families, with Holm--Bonferroni correction and bootstrap confidence intervals. Two
-results from it bear on practice. Fourteen of sixty-three augmentations are
-statistically significant \emph{degradations}, the largest single effect we measure
-being a harm ($d=-9.59$); and four widely used sample-quality measures all fail to
-predict downstream utility. Code and all result files are publicly available.
+Intrusion detection systems miss rare attack classes, and synthetic
+augmentation is the standard remedy. We introduce flow matching as an augmenter for
+this problem, to our knowledge its first application here, generating one model per
+attack sub-type rather than per coarse category, with column types inferred from the
+data. It yields eleven statistically significant rare-class improvements across three
+benchmark datasets, the largest raising user-to-root F1 by $85.6\%$ relative
+($p=0.002$, Cohen's $d=4.68$), using ten integration steps, a hundredfold fewer
+network evaluations per record than the schedule standard in diffusion. We further
+identify a quantity that predicts where the method succeeds. Sub-class coverage, the
+share of a class's records belonging to sub-types large enough to model, separates
+the two outcomes cleanly: at $97\%$ coverage per-type generation beats the best
+classical resampler, at $58\%$ it loses to one, and a control dataset confirms the mechanism. Because existing comparisons use binary
+labels, aggregate metrics or a single classifier, we also report the per-class
+evaluation they omit: eight methods, nine rare attack classes, five seeds and two
+classifier families, with corrected significance testing throughout. Fourteen of sixty-three augmentations are statistically
+significant degradations, and four widely used sample-quality measures all fail to
+predict downstream utility.
 \end{abstract}
 
-\begin{IEEEkeywords}
-Intrusion detection, class imbalance, generative models, flow matching,
-synthetic data, rare attack detection.
-\end{IEEEkeywords}
+\noindent\textbf{Keywords:} intrusion detection; class imbalance; generative models;
+flow matching; synthetic data; rare attack detection
 
-%==============================================================================
-\section{Introduction}
-%==============================================================================
+\section*{Introduction}
 
-\IEEEPARstart{N}{etwork} intrusion detection systems (NIDS) built on supervised
+Network intrusion detection systems (NIDS) built on supervised
 machine learning are now standard components of enterprise security monitoring,
 and the published accuracy figures attached to them are remarkable. Models
 evaluated on the common benchmarks routinely report overall accuracy above
@@ -165,7 +140,7 @@ of \baseAcc{} against a macro-averaged F1 of \baseMacroF{}, with R2L recall of
 \baseRtwolPrec{} is instructive. The classifier is almost never wrong when it
 does flag an R2L attack; it simply declines to flag them.
 
-\subsection{Existing responses and their limits}
+\subsection*{Existing responses and their limits}
 
 Two families of remedy dominate the literature. The first resamples the training
 distribution. SMOTE \cite{chawla2002smote} synthesises minority examples by
@@ -211,7 +186,7 @@ is near-indistinguishable from real data on NSL-KDD R2L (AUC
 Sample fidelity and downstream utility come apart, and a synthetic-data
 evaluation that reports only the former can rank methods in the wrong order.
 
-\subsection{This work}
+\subsection*{This work}
 
 We address the rare-attack problem with flow matching
 \cite{lipman2023flow}, a continuous-time generative framework that learns a
@@ -248,7 +223,7 @@ benchmark as substantially a problem of distribution shift rather than of class
 balance, and it motivates generating at the level of individual attack types
 rather than coarse categories.
 
-\subsection{Contributions}
+\subsection*{Contributions}
 
 \begin{enumerate}
 \item \textbf{A method.} We introduce flow matching as a minority-class augmenter for
@@ -293,34 +268,32 @@ preprocessing, label mappings, degenerate-fit detection, and the scripts that
 generate every table and figure in this paper directly from the saved result files.
 \end{enumerate}
 
-\subsection{Organisation}
+\subsection*{Organisation}
 
-Section~\ref{sec:related} reviews imbalance handling in intrusion detection and
+the Prior work section reviews imbalance handling in intrusion detection and
 generative modelling for tabular data, and positions this work against the closest
-recent benchmarking study. Section~\ref{sec:method} formalises the augmenter: the
+recent benchmarking study. the Methods formalises the augmenter: the
 flow-matching objective, the type-aware encoding, per-attack-type generation and the
 coverage quantity, and the architecture-matched diffusion baseline.
-Section~\ref{sec:setup} details datasets, classifiers and the statistical protocol,
+the Methods details datasets, classifiers and the statistical protocol,
 including a resolution limit we report rather than work around.
 
-Section~\ref{sec:results} is organised as an argument. Section~\ref{sec:res:main}
+the Results is organised as an argument. the Results
 establishes that the method improves rare-class detection;
-Section~\ref{sec:res:pertype} shows that where it does so is predictable in advance
-from sub-class coverage; Section~\ref{sec:res:h2h} reports the head-to-head against
+the Results shows that where it does so is predictable in advance
+from sub-class coverage; the Results reports the head-to-head against
 classical resampling in full, including the five classes where classical methods
-win. Sections~\ref{sec:res:encoding}--\ref{sec:res:efficiency} cover the encoding,
+win. the Results--the Results cover the encoding,
 the failure of sample-quality measures to predict utility, and two standard settings
-that can be reduced at no cost. Sections~\ref{sec:res:harms}
-and~\ref{sec:res:robustness} report where augmentation degrades detection and how far
+that can be reduced at no cost. the Results
+and~the Results report where augmentation degrades detection and how far
 the conclusions transfer across classifier families.
 
-Section~\ref{sec:discussion} interprets these results, Section~\ref{sec:limitations}
-states what they do not establish, and Section~\ref{sec:conclusion} concludes.
+the Discussion interprets these results, the Limitations section
+states what they do not establish, and the Conclusion concludes.
 
-%==============================================================================
-\section{Related Work}\label{sec:related}
-%==============================================================================
-\subsection{Resampling for imbalanced intrusion detection}
+\subsection*{Prior work}
+\subsubsection*{Resampling for imbalanced intrusion detection}
 
 The dominant response to rare-attack detection is to rebalance the training
 distribution. SMOTE~\cite{chawla2002smote} synthesises minority records by
@@ -338,7 +311,7 @@ can reduce rare-class F1 substantially \emph{below} the unaugmented baseline, wi
 corrected significance and large effect sizes, on the very classes they are applied
 to protect.
 
-\subsection{Generative models for tabular data}
+\subsubsection*{Generative models for tabular data}
 
 Interpolation has increasingly been replaced by learned generators.
 CTGAN~\cite{xu2019modeling} adapts adversarial training to tabular data through
@@ -354,7 +327,7 @@ not previously been applied to intrusion detection augmentation. Its practical c
 over diffusion --- comparable sample quality at far fewer network evaluations --- is
 one we test directly.
 
-\subsection{Generative augmentation for intrusion detection}
+\subsubsection*{Generative augmentation for intrusion detection}
 
 Applications of generative models to intrusion datasets are numerous, and several
 recent works train a separate generator per attack category rather than a single
@@ -376,7 +349,7 @@ metrics conceal effects of opposite sign occurring simultaneously within one dat
 and roughly one learned-generator run in five fails silently in a way that a single
 run would either miss entirely or report as a result.
 
-\subsection{Evaluating synthetic data}
+\subsubsection*{Evaluating synthetic data}
 
 The closest recent work to ours is the architectural selection framework
 of~\cite{architectural2026selection}, which benchmarks twelve generative
@@ -404,7 +377,7 @@ detectability, nearest-neighbour distance, marginal divergence, and attribution
 similarity~\cite{lundberg2017unified} --- none orders the methods as downstream
 rare-class F1 does.
 
-\subsection{Data complexity measures}
+\subsubsection*{Data complexity measures}
 
 The observation that some classes resist augmentation regardless of how much data is
 supplied connects to the classification-complexity literature, which characterises
@@ -413,361 +386,16 @@ nearest-neighbour error and the $k$-neighbourhood class purity --- and report bo
 strong relationship they hold with baseline difficulty and the absence of any
 relationship with achievable augmentation gain once that difficulty is accounted for.
 
-%==============================================================================
-\section{Method}\label{sec:method}
-%==============================================================================
+\section*{Results}
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/fig0_pipeline}
-\caption{The evaluation pipeline. Only the augmentation stage differs between the
-eight arms compared in this study; splits, encoding, classifier and metrics are
-identical throughout. Two properties are enforced by construction and are visible
-in the wiring: synthetic records enter the training partition only and never reach
-the test partition, and every transform---the one-hot encoder, the scaler and the
-column-type inference---is fitted after augmentation on training data alone.}
-\label{fig:pipeline}
-\end{figure*}
-
-\subsection{Problem setting}
-
-Let $\mathcal{D}=\{(x_i,y_i)\}_{i=1}^{N}$ be a labelled set of network flow records,
-where $x_i \in \mathcal{X}$ collects the features emitted by a flow meter and
-$y_i \in \{1,\dots,C\}$ names an attack category or benign traffic. The class counts
-$n_c = |\{i : y_i = c\}|$ are severely unequal: on NSL-KDD the U2R category holds
-\utwrTrain{} training records against \numnormal{} benign ones, a ratio of
-\utwrRatio{}.
-
-Fig.~\ref{fig:pipeline} shows the pipeline these arms sit inside. An
-augmentation arm is a map $\mathcal{A}$ that takes the training partition and
-returns an enlarged one,
-\begin{equation}
-\mathcal{A} : \mathcal{D}_{\text{train}} \;\longmapsto\;
-\mathcal{D}_{\text{train}} \cup \mathcal{S},
-\qquad
-\mathcal{S} = \bigcup_{c} \mathcal{S}_c ,
-\end{equation}
-where $\mathcal{S}_c$ contains $\max(0,\, \tau - n_c)$ synthetic records carrying
-label $c$ and $\tau$ is a target count. Two properties of this formulation are worth
-making explicit, because they are not universal in this literature. First, real
-records are never displaced: only the shortfall to $\tau$ is synthesised, so every
-arm trains on the same real data plus a different synthetic supplement. Second, the
-majority class is never reduced. We measured the alternative --- capping benign
-traffic on CICIDS2017 at $100{,}000$ records --- and it lowered Bot F1 from $0.822$
-to $0.761$ despite improving the nominal imbalance ninefold, so the cap is applied
-to $\tau$ rather than to the data.
-
-\subsection{Augmentation arms}
-
-Eight arms are compared. Four are classical and serve as the bar any learned
-generator must clear.
-
-\begin{itemize}
-\item \textbf{None.} The unaugmented pipeline. Reported as an arm rather than as a
-      reference line, because on one dataset it wins.
-\item \textbf{Random oversampling.} Minority records duplicated with replacement.
-      Crude, and included precisely because it is: it distorts nothing.
-\item \textbf{SMOTE.} Interpolation between a record and its $k$ nearest same-class
-      neighbours. We use SMOTE-NC where categorical columns are present, since
-      interpolating one-hot indicators produces fractional membership.
-\item \textbf{ADASYN.} As SMOTE, with sampling density weighted toward records whose
-      neighbourhoods are dominated by other classes.
-\end{itemize}
-
-Four are learned generators, one per major family.
-
-\begin{itemize}
-\item \textbf{CTGAN}~\cite{xu2019modeling}, the published implementation, with its
-      mode-specific normalisation, conditional sampler and PacGAN discriminator~\cite{lin2018pacgan}.
-\item \textbf{Diffusion}, described in Section~\ref{sec:method:diff}.
-\item \textbf{Flow matching}, described in Section~\ref{sec:method:fm}.
-\item \textbf{Per-type flow matching}, described in Section~\ref{sec:method:pertype}.
-\end{itemize}
-
-For every arm, $k$ is set to $\min(5, n_{\min}-1)$ so that the smallest class does
-not fall below the neighbour count, and augmentation is applied to the raw frame
-before any encoding, so that categorical fields are handled as categories rather
-than as coordinates.
-
-\subsection{Flow matching for tabular records}\label{sec:method:fm}
-
-Flow matching~\cite{lipman2023flow} learns a time-dependent velocity field
-$v_\theta(x,t)$ that transports a simple reference distribution to the data
-distribution along a prescribed path. We take the linear path: for a real record
-$x_1$ and a Gaussian draw $x_0 \sim \mathcal{N}(0,I)$,
-\begin{equation}
-x_t = (1-t)\,x_0 + t\,x_1 ,
-\qquad t \in [0,1],
-\end{equation}
-whose associated target velocity is simply $x_1 - x_0$. Training minimises
-\begin{equation}
-\mathcal{L}(\theta) \;=\;
-\mathbb{E}_{t,\,x_0,\,x_1}
-\bigl\lVert v_\theta(x_t,t) - (x_1 - x_0) \bigr\rVert_2^2 ,
-\label{eq:fmloss}
-\end{equation}
-with $t$ drawn uniformly. Sampling integrates $\dot{x} = v_\theta(x,t)$ from $t=0$
-to $t=1$ by explicit Euler steps.
-
-Equation~\eqref{eq:fmloss} has an irreducible floor. The regression target
-$x_1-x_0$ is stochastic given $x_t$, so the best attainable predictor is its
-conditional mean and the loss cannot reach zero. On NSL-KDD's U2R class that floor
-sits near $1.31$, and our fitted models converge to approximately $0.35$. We state
-this because a reader comparing loss curves across generative families would
-otherwise have no reference for what convergence looks like here.
-
-\subsection{Type-aware encoding}\label{sec:method:encoding}
-
-Flow matching as stated above treats $\mathcal{X}$ as a Euclidean space. Network
-flow records are not one. Table~\ref{tab:feattypes} audits this. Of NSL-KDD's 38 nominally numeric columns,
-six are binary
-flags such as \texttt{land} and \texttt{root\_shell}, six are low-cardinality counts
-such as \texttt{num\_shells}, and eleven are unbounded integer counts; only fifteen
-are genuinely continuous. Transported as continuous coordinates, these fields
-produce records with \texttt{land}~$=0.37$, which describes no realisable
-connection.
-
-\input{tables/tab_feattypes}
-
-We therefore infer column type from the training partition and encode accordingly:
-columns with at most ten distinct values are treated as discrete and one-hot
-encoded, integer counts are modelled after a $\log(1+x)$ transform and rounded on
-return, and continuous columns are standardised. At sampling time, discrete blocks
-are decoded by drawing from the softmax over the block rather than by taking its
-argmax, which would collapse every synthetic record of a class onto the modal
-category.
-
-The effect is large. On U2R the median Kolmogorov--Smirnov distance between real and
-synthetic marginals falls from $0.424$ to $0.056$, and the AUC of a discriminator
-trained to separate synthetic records from real ones falls from $1.000$ --- perfectly
-separable --- to $0.947$.
-
-This is not a new idea in generative modelling: TabDDPM~\cite{kotelnikov2023tabddpm}
-applies multinomial diffusion to categorical and binary fields for the same reason,
-and CTGAN's design likewise separates discrete from continuous columns. We record
-the measurement because the practice does not appear to have transferred to
-intrusion-detection augmentation, where SMOTE-NC protects only the columns declared
-categorical in the dataset documentation and interpolates the binary ones.
-
-\subsection{Per-attack-type generation}\label{sec:method:pertype}
-
-Coarse intrusion categories are not single modes. NSL-KDD's R2L category aggregates
-eight distinct attack types --- \texttt{warezclient}, \texttt{guess\_passwd},
-\texttt{warezmaster} and others --- that share a label but not a distribution. A
-single continuous generator fitted to that mixture places mass between its
-components, in regions where no real attack lies.
-
-We fit one generator per attack type $s$ within a class, provided that type has at
-least $m$ training records, and draw from each in proportion to its share:
-\begin{equation}
-|\mathcal{S}_c^{(s)}| \;=\;
-\left\lfloor (\tau - n_c) \cdot \frac{n_{c}^{(s)}}{\sum_{s' \in \mathcal{T}_c} n_c^{(s')}}
-\right\rfloor ,
-\end{equation}
-where $\mathcal{T}_c$ is the set of types clearing the threshold. Types below it are
-not modelled, so per-type generation covers only part of a class, and that fraction
-turns out to predict where the method helps.
-
-We define the \emph{coverage} of class $c$ as the share of its training records
-belonging to a modelled type,
-\begin{equation}
-\kappa_c \;=\;
-\frac{\sum_{s \in \mathcal{T}_c} n_c^{(s)}}{n_c},
-\qquad
-\mathcal{T}_c = \{\, s : n_c^{(s)} \geq m \,\},
-\label{eq:coverage}
-\end{equation}
-so that $\kappa_c = 1$ when every type is modelled and $\kappa_c \to 0$ when the
-class is composed of types too small to fit. Equation~\eqref{eq:coverage} is
-computable from the training labels alone, before any generator is trained, and it
-is the quantity we find predicts where per-type generation is worth its cost.
-
-On NSL-KDD, per-type generation attains $\kappa = 0.97$ on R2L (three of eight types)
-and $\kappa = 0.58$ on U2R (one of four, only \texttt{buffer\_overflow} clearing the
-threshold). It takes R2L outright and finishes last among augmented arms on U2R.
-UNSW-NB15 supplies a control: it carries no labels below \texttt{attack\_cat}, so
-coverage is unity by construction, per-type reduces exactly to per-class, and the
-two arms should agree. They do, to within seed noise --- which is evidence that
-coverage, and not some incidental difference between the two implementations, is
-what separates them on NSL-KDD.
-
-\subsection{An architecture-matched diffusion baseline}\label{sec:method:diff}
-
-Comparing flow matching against an off-the-shelf diffusion implementation would
-confound the generative mechanism with differences in preprocessing, architecture
-and tuning. Our diffusion arm therefore subclasses the flow matcher and overrides
-only the training objective and the sampler. Encoder, decoder, type inference,
-$\log(1+x)$ handling, network width and depth, optimiser and categorical decoding
-are shared by construction rather than by intention.
-
-The forward process uses a cosine schedule,
-$\bar{\alpha}_t = \cos^2\!\bigl(\tfrac{\pi}{2}\cdot\tfrac{t/T+s}{1+s}\bigr)$ with
-$s=0.008$, and sampling uses DDIM striding~\cite{song2021ddim} at the same step count as flow matching,
-so the two arms cost the same number of network evaluations per record. Full
-1000-step ancestral sampling was not tractable at CICIDS2017 scale and was not run;
-we state this rather than leave it implied.
-
-CTGAN is deliberately \emph{not} matched in this way. It is the published
-implementation because that is the baseline a reader expects to see, and
-substituting a hand-written GAN would invite the objection that we did not use the
-real thing. The consequence is that any CTGAN-versus-flow difference may originate
-in preprocessing rather than in the adversarial objective, and we do not draw
-mechanism claims from that comparison.
-
-\subsection{Preventing leakage}\label{sec:method:leak}
-
-Three rules are applied without exception. Every transform --- the one-hot encoder,
-the scaler, the type inference --- is fitted on the training partition alone.
-Augmentation touches the training partition only; no synthetic record ever reaches
-the test set. Generators are fitted only to training records of the class they will
-synthesise.
-
-Categories present in test but absent from training are encoded as all-zero rather
-than raising an error. This matters here: NSL-KDD's test split contains
-\texttt{service} values that never appear in training, and dropping those rows would
-silently discard exactly the rare attacks under study.
-
-%==============================================================================
-\section{Experimental Setup}\label{sec:setup}
-%==============================================================================
-
-\subsection{Datasets}
-
-Three benchmarks are used, summarised in Table~\ref{tab:datasets}. Goldschmidt and Chud\'{a} survey the available options and their limitations~\cite{goldschmidt2025network}. Ours are chosen to
-match those of the work this study takes as its
-reference point~\cite{alsubaei2025smart} and to span three decades of network
-telemetry.
-
-\textbf{NSL-KDD} is evaluated on its official \texttt{KDDTrain+} /
-\texttt{KDDTest+} partition (\trainRows{} / $22{,}544$ records, 41 features), with
-the 23 attack labels mapped to the standard five categories. We report it as a
-diagnostic rather than a headline benchmark, for a reason established in
-Section~\ref{sec:setup:shift}.
-
-\textbf{UNSW-NB15} is evaluated on its official partition ($175{,}341$ /
-$82{,}332$ records) across ten categories. Its rare classes --- Analysis, Backdoor,
-Shellcode and Worms --- all appear in both partitions, so a failure here is a failure
-of method rather than of benchmark.
-
-\textbf{CICIDS2017} is the largest and most recent, and receives a stratified
-$70/30$ split on the fine-grained label ($1{,}979{,}513$ / $848{,}363$ records, 78
-features). We repair two defects in the published files: \texttt{Flow Bytes/s} and
-\texttt{Flow Packets/s} carry infinities where the flow duration is zero, and
-several web-attack labels are mis-encoded, appearing with a replacement character
-where a hyphen was intended. Records with non-finite features are dropped and the labels are normalised. Both are instances of a wider problem: Engelen et al.\ document further defects in this dataset's flow construction and labelling and publish a corrected release~\cite{engelen2021troubleshooting}, and Dube argues that the summarised flow representation is itself a poor basis for classification irrespective of such defects~\cite{dube2024faulty}. We apply the repairs relevant to the features we use and return to the second point in Section~\ref{sec:limitations}.
-
-\input{tables/tab_datasets}
-
-Infiltration (25 training records) and Heartbleed (8) are excluded from all
-headline claims: with 11 and 3 test records respectively, their per-class F1 cannot
-be estimated stably, and including them destabilises macro-F1 by up to $0.13$
-between seeds that differ by $0.002$ on every other class.
-
-\subsection{Why NSL-KDD is reported as a diagnostic}\label{sec:setup:shift}
-
-The R2L failure on NSL-KDD is quoted throughout this literature as evidence of a
-class-imbalance problem. It is largely not one. Of the \rtwolTrain{} R2L training
-records, \warezTrain{} --- $89\%$ --- belong to \texttt{warezclient}, an attack type
-with \emph{zero} test records. Conversely, $642$ of $2{,}887$ R2L test records
-belong to types with no training representation at all, as do $30$ of $67$ U2R test
-records.
-
-The effective R2L training size is therefore approximately \rtwolEffective{}
-records, an effective imbalance near \rtwolEffectiveRatio{} rather than the
-$1{:}68$ implied by the class counts. A generator fitted to R2L learns to reproduce
-\texttt{warezclient}, which cannot assist in detecting \texttt{snmpguess}. No
-augmentation method can close a gap of this kind, and results on this benchmark
-should be read as measuring behaviour under distribution shift rather than under
-imbalance.
-
-\subsection{Classifiers}
-
-Two classifiers are used, chosen to match the reference work, which evaluates with
-both a gradient-boosted tree and a neural network~\cite{alsubaei2025smart}, and
-because they sit at opposite ends of the inductive-bias axis that should matter to synthetic data. That gradient-boosted trees remain hard to beat on tabular problems is well established~\cite{grinsztajn2022why}; the difference in inductive bias is precisely why we expect augmentation to affect the two differently. A tree is piecewise-constant and invariant to monotone rescaling, so
-a synthetic record falling inside an existing leaf merely reweights it. A network
-interpolates smoothly and is sensitive to feature scale, so the same record displaces
-a decision boundary it must then fit.
-
-\textbf{XGBoost}~\cite{chen2016xgboost}: 200 trees, depth 6, learning rate $0.3$,
-histogram method. Row and
-column subsampling are set to $0.8$ rather than $1.0$; at $1.0$ the fit is
-deterministic given fixed data, every seed returns an identical model, and the
-reported standard deviation is exactly zero, which measures nothing.
-
-\textbf{Multi-layer perceptron}: two hidden layers of 256 and 128 units with batch
-normalisation, ReLU and dropout $0.2$; AdamW at $10^{-3}$; early stopping on a $5\%$
-split held out from the \emph{training} partition, never from test.
-
-Table~\ref{tab:hyper} lists every setting used.
-Neither classifier is tuned per arm. A per-arm search would confound the
-augmentation effect with the effort spent tuning each arm, which is the most common
-way this comparison is gotten wrong. Neither uses class weighting, so that any
-difference between them is attributable to the model family rather than to two
-different imbalance corrections.
-
-\subsection{Metrics and statistical protocol}
-
-Per-class precision, recall and F1 are the primary readout, reported with test
-support attached. Overall accuracy is computed only to be contrasted with macro-F1:
-on NSL-KDD the unaugmented pipeline reaches accuracy \baseAcc{} at macro-F1
-\baseMacroF{}, and that gap is the phenomenon under study.
-
-Every configuration is repeated over five seeds, which perturb both synthetic
-sampling and classifier fitting. Comparisons against the unaugmented arm use paired
-$t$-tests with Holm--Bonferroni correction applied within each (dataset, class)
-family, Cohen's $d$, and $10{,}000$-resample bootstrap confidence intervals~\cite{efron1979bootstrap}; the correction follows Holm's sequentially rejective procedure~\cite{holm1979simple}.
-
-We report a limit rather than working around it. The Wilcoxon signed-rank statistic
-over $n=5$ paired samples admits $2^5=32$ sign assignments, so its smallest
-attainable two-sided $p$-value is $0.0625$: \emph{no} comparison in this study can
-reach $p<0.05$ by that test, whatever the effect size. Reporting Wilcoxon alone would
-therefore render every result non-significant for a reason unrelated to the data.
-We use \textbf{``the 95\% bootstrap confidence interval excludes zero'' as the
-primary criterion} and report $p$-values alongside it.
-
-\subsection{Degenerate fits}\label{sec:setup:degenerate}
-
-A fit that predicts a single class for the entire test set is not a sample from a
-method's performance distribution; it is a failure to train. These occur here, they
-are silent --- no exception, no warning, the GPU neither idle nor out of memory ---
-and they reproduce exactly across independent runs, so they are properties of the
-fit rather than noise. On CICIDS2017 the unaugmented arm at one seed predicts only
-benign traffic, reaching macro-F1 $0.0996$.
-
-Such fits are detected automatically, counted, and reported as a failure rate rather
-than averaged into a mean or quietly discarded. Averaging that single seed into the
-unaugmented arm moves its macro-F1 from $0.943$ to $0.775$, which would reverse the
-comparison it participates in.
-
-Learned generators additionally exhibit \emph{partial} collapse, in which one rare
-class degrades sharply while macro-F1 remains plausible. Because these evade any
-threshold on the aggregate, we report medians alongside means throughout; the gap
-between them is itself informative, and Section~\ref{sec:discussion} returns to it.
-
-\subsection{Implementation}
-
-All experiments run on a single machine with an NVIDIA GTX 1650 (4\,GB) and 14\,GB
-of system memory. Generators, both classifiers, and the neighbour searches used in
-the quality diagnostics run on the GPU; the classical resamplers are CPU-bound
-library implementations. Sampling is chunked so that GPU memory pressure does not
-vary with the number of records drawn, an effect that produced a fivefold spread in
-runtime for identical work before it was identified.
-
-Every result reported here is written to disk as it is produced and every table and
-figure in this paper is generated from those files by script. No number in this
-manuscript is transcribed by hand.
-
-\input{tables/tab_hyper}
-\section{Results}\label{sec:results}
 
 All numbers in this section are produced by \texttt{experiments/17\_paper\_tables.py}
 directly from the saved result files; none are transcribed by hand. Every arm sees
 the same splits, the same seeds, and the same preprocessing, and augmentation is
 applied to the training partition only, under the rules of
-Section~\ref{sec:method:leak}.
+the Methods.
 
-\subsection{Rare-class detection improves substantially}\label{sec:res:main}
+\subsection*{Rare-class detection improves substantially}
 
 Table~\ref{tab:improvements} reports every improvement whose 95\% bootstrap
 confidence interval excludes zero; Fig.~\ref{fig:effects} places them alongside
@@ -824,12 +452,12 @@ often; F1 rewards that trade and PR-AUC does not.
 
 We therefore state the scope of the NSL-KDD result precisely. On a benchmark whose
 effective rare-class training signal is roughly one-tenth its nominal size
-(Section~\ref{sec:setup:shift}), whole-class continuous generation buys recall at the
+(the Methods), whole-class continuous generation buys recall at the
 cost of precision rather than better discrimination, and a deployment sensitive to
 false-alarm volume should not read those two rows as improvements.
 \emph{Sub-class generation is the exception}, improving discrimination itself on both
 classes --- which is consistent with the coverage mechanism of
-Section~\ref{sec:res:pertype}: modelling the attack types that actually occur
+the Results: modelling the attack types that actually occur
 produces a better-ordered decision function, not merely a wider one.
 
 \input{tables/tab_prauc}
@@ -847,18 +475,18 @@ for all eight arms.
 
 \input{tables/tab_improvements}
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{figures/fig1_effects}
+\includegraphics[width=\linewidth]{figures/fig1_effects}
 \caption{Every effect whose 95\% bootstrap confidence interval excludes zero, across three datasets, nine rare classes and seven augmentation methods. Points are mean change in F1 against the unaugmented pipeline; bars are the bootstrap interval. Twenty-two effects are improvements and fourteen are degradations. Sign is carried by position about the zero line as well as by hue, so the encoding survives greyscale reproduction.}
 \label{fig:effects}
-\end{figure*}
+\end{figure}
 
 \input{tables/tab_full_nslkdd}
 \input{tables/tab_full_unsw}
 \input{tables/tab_full_cicids}
 
-\subsection{Coverage determines where per-type generation wins}\label{sec:res:pertype}
+\subsection*{Coverage determines where per-type generation wins}
 
 Fitting one generator per attack type rather than per coarse class improves sample
 quality markedly: on R2L the nearest-neighbour distance ratio falls from $21.40$ to
@@ -866,7 +494,7 @@ $7.14$ and the median Kolmogorov--Smirnov statistic from $0.113$ to $0.061$. A c
 class such as R2L is a mixture of dissimilar attack types, and a single continuous
 generator fitted to that mixture places mass between its modes rather than on them.
 
-Sample quality, however, is not the interesting part --- Section~\ref{sec:res:quality}
+Sample quality, however, is not the interesting part --- the Results
 shows it does not predict utility. The interesting part is that the benefit of
 per-type generation is \emph{predictable in advance}, from a quantity computable
 before any generator is fitted.
@@ -882,7 +510,7 @@ hyperparameters, same dataset, opposite outcomes, ordered by coverage.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{figures/fig2_coverage}
+\includegraphics[width=0.8\linewidth]{figures/fig2_coverage}
 \caption{Sub-class coverage predicts the outcome. Per-type generation beats the best classical resampler on the class where the modelled attack types account for $97\%$ of training records, and loses on the class where they account for $58\%$. NSL-KDD, mean over five seeds.}
 \label{fig:coverage}
 \end{figure}
@@ -899,12 +527,12 @@ This yields a usable rule. \emph{Compute the fraction of a class's records belon
 to sub-types large enough to model; if it is low, sub-class generation should not be
 expected to help, and the compute is better spent elsewhere.} We are not able to
 locate the threshold precisely from two points, and say so in
-Section~\ref{sec:limitations}; what the data supports is the direction and the
+the Limitations section; what the data supports is the direction and the
 mechanism, not a calibrated cut-off.
 
-\subsection{Generative versus classical, head to head}\label{sec:res:h2h}
+\subsection*{Generative versus classical, head to head}
 
-Section~\ref{sec:res:main} compares each method against no augmentation. The stricter
+the Results compares each method against no augmentation. The stricter
 question is whether a learned generator beats the classical resamplers a practitioner
 would otherwise reach for. Table~\ref{tab:headtohead}, plotted in
 Fig.~\ref{fig:headtohead}, answers it for every rare
@@ -914,7 +542,7 @@ class.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{figures/fig3_head_to_head}
+\includegraphics[width=0.8\linewidth]{figures/fig3_head_to_head}
 \caption{Best generative arm minus best classical arm on every rare class, by median over five seeds. The generative family leads on four of nine classes. The largest deficit is Worms, where plain random oversampling wins by $0.159$ on a class with 130 training records.}
 \label{fig:headtohead}
 \end{figure}
@@ -933,18 +561,18 @@ Backdoor and Shellcode. CTGAN is the weakest of the four on NSL-KDD and is the o
 generative arm there to push a class \emph{below} the unaugmented baseline, U2R
 falling from $0.219$ to $0.182$. Since the diffusion arm is architecture-matched to
 the flow matcher and both sample at the same step count
-(Section~\ref{sec:method:diff}), flow matching's advantage in this setting is not
+(the Methods), flow matching's advantage in this setting is not
 sample utility --- the two sit within seed noise on most classes and their ordering
 changes by class --- but the fact that it reaches that parity without a noise
 schedule to tune.
 
 We report this table in full rather than only the four favourable rows, because it is
-what allows Section~\ref{sec:res:pertype} to be read as a scope condition rather than
+what allows the Results to be read as a scope condition rather than
 as selective reporting. A learned generator is not a general replacement for
 resampling in this setting. It is preferable on specific classes, and the coverage
 statistic identifies a subset of them before any training is done.
 
-\subsection{Type-aware encoding}\label{sec:res:encoding}
+\subsection*{Type-aware encoding}
 
 Twenty-three of NSL-KDD's 38 nominally numeric fields are binary flags or
 low-cardinality counts; generating them as continuous produces records such as
@@ -952,16 +580,16 @@ low-cardinality counts; generating them as continuous produces records such as
 according to their inferred type reduces the U2R median KS statistic from $0.424$ to
 $0.056$ and lowers real-versus-synthetic discriminator AUC from $1.000$ to $0.947$.
 
-As noted in Section~\ref{sec:method:encoding}, this is established practice in the
+As noted in the Methods, this is established practice in the
 tabular generative modelling literature~\cite{kotelnikov2023tabddpm,xu2019modeling}.
 We report the magnitude because it appears not to have transferred to this
 application area, and because an eightfold change in marginal agreement is large
 enough that a comparison omitting it is measuring the encoding rather than the
 generator.
 
-\subsection{No quality measure predicts utility}\label{sec:res:quality}
+\subsection*{No quality measure predicts utility}
 
-Section~\ref{sec:res:encoding} improved sample quality substantially. It is therefore
+the Results improved sample quality substantially. It is therefore
 worth establishing what sample quality buys, and the answer is that it does not
 reliably buy detection performance.
 
@@ -988,15 +616,15 @@ statistic from $0.146$ to $0.063$ while discriminator AUC held at $0.9996$.
 The consequence for practice is that a generator selected on fidelity grounds need
 not be the one that improves detection.
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
-\includegraphics[width=0.72\textwidth]{figures/fig5_quality_utility}
+\includegraphics[width=\linewidth]{figures/fig5_quality_utility}
 \caption{Attribution divergence against rare-class F1 on NSL-KDD. Each point is one augmentation method; the horizontal axis is the $L_1$ distance between the SHAP profile of the augmented model and that of the unaugmented one. Neither class shows a usable relationship, and on R2L the method that diverges most from the baseline decision rule is also the best performing.}
 \label{fig:quality}
-\end{figure*}
+\end{figure}
 
 
-\subsection{Both standard settings can be reduced}\label{sec:res:efficiency}
+\subsection*{Both standard settings can be reduced}
 
 Table~\ref{tab:efficiency} and Fig.~\ref{fig:ablations} report two ablations on
 choices that are conventional
@@ -1010,15 +638,15 @@ half the training rows.
 
 \input{tables/tab_efficiency}
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
-\includegraphics[width=0.78\textwidth]{figures/fig7_ablations}
+\includegraphics[width=\linewidth]{figures/fig7_ablations}
 \caption{Both ablations. Accuracy is flat from ten integration steps upward, and lifting minority classes to a quarter of parity matches full rebalancing. Error bars are one standard deviation over three seeds.}
 \label{fig:ablations}
-\end{figure*}
+\end{figure}
 
 
-\subsection{Where augmentation degrades detection}\label{sec:res:harms}
+\subsection*{Where augmentation degrades detection}
 
 Augmentation is not uniformly beneficial, and the direction of its effect is not
 predictable from the method alone. Of 63 comparisons against the unaugmented
@@ -1033,7 +661,7 @@ rare class is not a separable region of the feature space, that interpolation pl
 synthetic records inside the territory of other classes and moves the decision
 boundary against the class it was intended to help.
 
-\subsection{Transfer across classifier families}\label{sec:res:robustness}
+\subsection*{Transfer across classifier families}
 
 Reported improvements in this literature are almost always established with a single
 classifier. Because the base evaluation of this problem uses both a gradient-boosted
@@ -1066,22 +694,23 @@ Table~\ref{tab:robustness} establishes is that they are properties of the
 augmentation \emph{and} the downstream model jointly, not of the augmentation alone.
 The practical implication is that an augmentation method should be selected against
 the classifier it will be deployed with, and that comparisons drawn from a single
-classifier should not be generalised. Section~\ref{sec:discussion} examines why the
+classifier should not be generalised. the Discussion examines why the
 two families respond differently.
 
 \input{tables/tab_robustness}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{figures/fig4_cross_classifier}
+\includegraphics[width=0.8\linewidth]{figures/fig4_cross_classifier}
 \caption{The same augmentation effect measured under two classifier families. Each point is one (dataset, class, method) triple; axes are the change in F1 against no augmentation. Points on the dashed identity line would indicate agreement. Shaded quadrants contain effects whose sign reverses between classifiers.}
 \label{fig:cross}
 \end{figure}
 
 
-\section{Discussion}\label{sec:discussion}
+\section*{Discussion}
 
-\subsection{Coverage, not capacity, decides where per-type generation helps}
+
+\subsection*{Coverage, not capacity, decides where per-type generation helps}
 
 Per-type generation takes R2L on NSL-KDD and finishes last among augmented arms on
 U2R, using the same code, the same hyperparameters and the same class of data. The
@@ -1101,7 +730,7 @@ The practical consequence is a quantity a practitioner can compute before spendi
 any GPU time: if the modelled types account for a small share of the class,
 sub-class generation should not be expected to help.
 
-\subsection{Why the two generative families fail on different classes}
+\subsection*{Why the two generative families fail on different classes}
 
 Shellcode and Analysis produce mirror-image orderings. On Shellcode every learned
 generator beats the unaugmented pipeline and every interpolation method loses to it,
@@ -1117,16 +746,16 @@ Analysis and $0.908$ for Backdoor against $0.654$ for Shellcode. Both
 \emph{continuous-time} generators transport a Gaussian through a smooth field, and
 mass placed near a heavily overlapped mode spreads into neighbouring classes, where
 CTGAN's mode-specific normalisation evidently does not. That comparison is not
-architecture-matched (Section~\ref{sec:method:diff}), so we offer it as a hypothesis
+architecture-matched (the Methods), so we offer it as a hypothesis
 consistent with the data rather than a demonstrated mechanism. Overlap measured
 beforehand identifies which classes are hard ($\rho=-0.77$, $p=0.0001$ over 19
 classes) but not how much augmentation recovers, its partial correlation with gain
 falling to $-0.11$ once baseline F1 is controlled for; sub-class coverage,
 Equation~\eqref{eq:coverage}, is the statistic that carries predictive weight here.
 
-\subsection{Why fidelity and utility come apart}
+\subsection*{Why fidelity and utility come apart}
 
-Section~\ref{sec:res:quality} reports that no quality measure orders the methods as
+the Results reports that no quality measure orders the methods as
 downstream F1 does. The mechanism appears to be structural rather than a matter of
 training budget: a continuous flow can approach the dense, near-duplicated clusters
 that network traffic forms but cannot concentrate mass onto them, which is why
@@ -1135,7 +764,7 @@ discriminator AUC at $0.9996$. Fidelity measures reward proximity to those clust
 detection depends on whether the synthetic records fall on the useful side of a
 decision boundary, and the two are not the same quantity.
 
-\subsection{Learned generators fail silently, at a measurable rate}
+\subsection*{Learned generators fail silently, at a measurable rate}
 
 On CICIDS2017's Bot class every learned generator loses one seed in five, F1
 dropping from roughly $0.83$ to $0.62$, while macro-F1 remains near $0.85$ and no
@@ -1157,7 +786,7 @@ reproduces the collapse, whereas regenerating the data does not.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{figures/fig6_stability}
+\includegraphics[width=0.8\linewidth]{figures/fig6_stability}
 \caption{Mean against median F1 per arm on CICIDS2017 Bot. A gap between the two
 indicates that some seeds have failed: the median describes a typical run and the
 mean absorbs the failures. Every learned generator shows a gap of $0.03$ or more;
@@ -1167,7 +796,7 @@ no classical method shows one.}
  No quality metric we
 computed distinguishes a collapsed batch from a healthy one in advance.
 
-\subsection{The three benchmarks disagree about the same method}
+\subsection*{The three benchmarks disagree about the same method}
 
 The classifier is not the only thing that changes the answer. Measured through one
 pipeline with identical seeds, SMOTE improves \emph{every} rare class on NSL-KDD
@@ -1178,18 +807,18 @@ merely its size, is dataset-dependent.
 
 The three benchmarks also fail for three different reasons. On NSL-KDD the rare
 classes fail because train and test attack types are largely disjoint
-(Section~\ref{sec:setup:shift}); on UNSW-NB15 because Analysis and Backdoor overlap
+(the Methods); on UNSW-NB15 because Analysis and Backdoor overlap
 other classes in feature space; on CICIDS2017 they mostly do not fail at all, two of
 three rare classes sitting above $0.98$ before any augmentation. \emph{None of the
 three is a shortage of training examples}, which is the cause the standard remedy
-addresses --- and the ablation of Section~\ref{sec:res:efficiency} confirms it
+addresses --- and the ablation of the Results confirms it
 directly: quadrupling the synthetic volume moves rare-class F1 by less than $0.004$.
 
 A claim of the form ``method $X$ helps with class imbalance in intrusion detection''
 drawn from a single benchmark is therefore unsupported, and single-benchmark
 evaluation is the norm in this literature.
 
-\subsection{What this means for evaluation practice}
+\subsection*{What this means for evaluation practice}
 
 Taken together, the results argue that the question ``which augmentation method is
 best for rare-attack detection?'' is not well posed as usually asked. Five different
@@ -1204,95 +833,421 @@ statistically solid and several are large. It means that reporting a single
 aggregate number from a single classifier on a single benchmark, which is the
 prevailing practice, cannot establish the claims that are routinely drawn from it.
 
-%==============================================================================
-\section{Limitations}\label{sec:limitations}
-%==============================================================================
+\subsection*{Limitations}
 
-\textbf{Five seeds.} Every configuration is repeated five times. This bounds the
-resolution of any rank test, as set out in Section~\ref{sec:setup}, and is fewer
+\noindent\textbf{Five seeds.} Every configuration is repeated five times. This bounds the
+resolution of any rank test, as set out in the Methods, and is fewer
 repetitions than some recent benchmarking work uses. Our seeds perturb both the
 synthetic draw and the classifier fit, so each repetition varies more of the
 pipeline than a repeated classifier fit on fixed synthetic data would, but the
 sample size is nonetheless five.
 
-\textbf{Two classifier families.} The finding that rankings do not transfer is
+\noindent\textbf{Two classifier families.} The finding that rankings do not transfer is
 established with two families. Two points establish that transfer fails; they cannot
 identify which family is atypical. A third family would settle that.
 
-\textbf{The neural classifier is untuned by design.} Fixing one architecture across
+\noindent\textbf{The neural classifier is untuned by design.} Fixing one architecture across
 all arms is what makes the arms comparable, but it means the network's absolute
 scores are a floor rather than the best a neural classifier could achieve. They
 should not be read as a claim about neural networks on tabular data.
 
-\textbf{A single split on CICIDS2017.} NSL-KDD and UNSW-NB15 use their official
+\noindent\textbf{A single split on CICIDS2017.} NSL-KDD and UNSW-NB15 use their official
 partitions; CICIDS2017 uses one stratified split with a fixed seed. Our confidence
 intervals therefore capture augmentation and classifier variability but not
 split variability on that dataset.
 
-\textbf{Summarised flow features.} All three benchmarks provide pre-computed flow statistics rather than raw traffic. Dube argues that this representation limits what any classifier trained on it can achieve~\cite{dube2024faulty}. Our comparisons are internally consistent, since every arm sees the same features, but absolute performance is bounded by the representation and would not transfer unchanged to a system working from packet captures.
+\noindent\textbf{Summarised flow features.} All three benchmarks provide pre-computed flow statistics rather than raw traffic. Dube argues that this representation limits what any classifier trained on it can achieve~\cite{dube2024faulty}. Our comparisons are internally consistent, since every arm sees the same features, but absolute performance is bounded by the representation and would not transfer unchanged to a system working from packet captures.
 
-\textbf{Single-machine compute.} All experiments run on one consumer GPU. Generator
+\noindent\textbf{Single-machine compute.} All experiments run on one consumer GPU. Generator
 capacity, training length and sampling steps were chosen to fit that budget, and a
 substantially larger generator might behave differently. The evidence against
-undertraining reported in Section~\ref{sec:discussion} constrains this concern but
+undertraining reported in the Discussion constrains this concern but
 does not eliminate it.
 
-\textbf{CTGAN is not architecture-matched.} As stated in
-Section~\ref{sec:method:diff}, this is deliberate, and we draw no mechanism claim
+\noindent\textbf{CTGAN is not architecture-matched.} As stated in
+the Methods, this is deliberate, and we draw no mechanism claim
 from CTGAN-versus-flow differences.
 
-%==============================================================================
-\section{Conclusion}\label{sec:conclusion}
-%==============================================================================
+\section*{Conclusion}
 
-We introduced flow matching as a minority-class augmenter for network intrusion
-detection --- to our knowledge its first application to this problem --- generating
-one model per attack sub-type rather than per coarse category, with column types
-inferred from the data rather than assumed continuous.
+We introduced flow matching as a minority-class augmenter for network
+intrusion detection, generating one model per attack sub-type with column types
+inferred from the data, and showed that it improves rare-class detection where the
+problem is hardest: eleven improvements have bootstrap confidence intervals excluding
+zero, six survive Holm--Bonferroni correction, and the largest raises user-to-root F1
+by $85.6\%$ relative on a class represented by 52 training records, at a
+hundredfold lower generation cost than standard diffusion sampling. Sub-class
+coverage, computable from the training labels before any generator is fitted,
+predicts where that benefit will be realised, separating a class won at $97\%$
+coverage from one lost at $58\%$, with a control dataset behaving exactly as the
+mechanism requires. Three findings bound the claim and each matters in practice:
+fourteen of sixty-three augmentations are statistically significant degradations,
+four independent measures of synthetic-sample quality fail to predict downstream
+utility, and the ranking of methods is a property of the augmentation and the
+downstream classifier jointly rather than of the augmentation alone. The practical
+recommendation follows from these together: compute sub-class coverage first, apply
+per-type generative augmentation where it is high, prefer classical resampling or no
+augmentation where it is low or the class is already well detected, and treat a
+default resampler applied without checking as an intervention capable of degrading
+the very classes it was meant to protect.
 
-The method works, and it works where the problem is hardest. Eleven rare-class
-improvements have bootstrap confidence intervals excluding zero, six survive
-Holm--Bonferroni correction, and seven are confirmed by threshold-free ranking
-quality in addition to F1. The largest raises user-to-root F1 by $85.6\%$ relative,
-from $0.2193$ to $0.4070$ at $p=0.0021$ with Cohen's $d=4.68$, on a class
-represented by 52 training records against a majority of 67,343; UNSW-NB15 Backdoor
-gains $64.9\%$ and remote-to-local $50.5\%$. All four generative families contribute
-at least one improvement, across both benchmarks whose rare classes appear in
-training and test.
+\section*{Methods}
 
-Sub-class generation is the variant that holds up most completely. It is the only
-generative arm to improve both F1 and PR-AUC on every NSL-KDD class it helps, where
-whole-class continuous generation instead trades precision for recall --- a
-distinction that matters to any deployment sensitive to false-alarm volume, and one
-that a study reporting F1 alone cannot make. Two settings taken as standard in this literature can
-be reduced at no cost: ten integration steps match one hundred, a hundredfold saving
-against the 1000-step schedule usual in diffusion, and lifting minority classes to a
-quarter of parity matches full rebalancing on half the training rows.
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/fig0_pipeline}
+\caption{The evaluation pipeline. Only the augmentation stage differs between the
+eight arms compared in this study; splits, encoding, classifier and metrics are
+identical throughout. Two properties are enforced by construction and are visible
+in the wiring: synthetic records enter the training partition only and never reach
+the test partition, and every transform---the one-hot encoder, the scaler and the
+column-type inference---is fitted after augmentation on training data alone.}
+\label{fig:pipeline}
+\end{figure}
 
-We also identified a quantity that says in advance where the method is worth its
-cost. Sub-class coverage --- the share of a class's records belonging to sub-types
-large enough to model, computable from the training labels before any generator is
-fitted --- separates the two outcomes cleanly. At $97\%$ coverage per-type generation
-beats the best classical resampler; at $58\%$ it loses to one. A control dataset
-carrying no sub-class labels, where coverage is unity by construction and the method
-degenerates to per-class generation, behaves as that mechanism predicts.
+\subsection*{Problem setting}
 
-Three findings bound the claim, and each is reported because a practitioner needs
-it. Fourteen of sixty-three augmentations are statistically significant
-\emph{degradations}, the largest single effect in this study being one of them.
-Four independent measures of synthetic-sample quality fail to predict downstream
-utility, so a generator chosen on fidelity grounds need not be the one that improves
-detection. And the ranking of methods is not a property of the augmentation alone:
-changing only the downstream classifier changes which arm performs best.
+Let $\mathcal{D}=\{(x_i,y_i)\}_{i=1}^{N}$ be a labelled set of network flow records,
+where $x_i \in \mathcal{X}$ collects the features emitted by a flow meter and
+$y_i \in \{1,\dots,C\}$ names an attack category or benign traffic. The class counts
+$n_c = |\{i : y_i = c\}|$ are severely unequal: on NSL-KDD the U2R category holds
+\utwrTrain{} training records against \numnormal{} benign ones, a ratio of
+\utwrRatio{}.
 
-The practical recommendation follows from these together. Compute sub-class coverage
-first; where it is high, per-type generative augmentation is worth the compute and
-delivers the gains reported here; where it is low, or where the class is already
-well detected, classical resampling or no augmentation is the better choice --- and
-a default resampler applied without checking is capable of degrading the very
-classes it was meant to protect.
+Fig.~\ref{fig:pipeline} shows the pipeline these arms sit inside. An
+augmentation arm is a map $\mathcal{A}$ that takes the training partition and
+returns an enlarged one,
+\begin{equation}
+\mathcal{A} : \mathcal{D}_{\text{train}} \;\longmapsto\;
+\mathcal{D}_{\text{train}} \cup \mathcal{S},
+\qquad
+\mathcal{S} = \bigcup_{c} \mathcal{S}_c ,
+\end{equation}
+where $\mathcal{S}_c$ contains $\max(0,\, \tau - n_c)$ synthetic records carrying
+label $c$ and $\tau$ is a target count. Two properties of this formulation are worth
+making explicit, because they are not universal in this literature. First, real
+records are never displaced: only the shortfall to $\tau$ is synthesised, so every
+arm trains on the same real data plus a different synthetic supplement. Second, the
+majority class is never reduced. We measured the alternative --- capping benign
+traffic on CICIDS2017 at $100{,}000$ records --- and it lowered Bot F1 from $0.822$
+to $0.761$ despite improving the nominal imbalance ninefold, so the cap is applied
+to $\tau$ rather than to the data.
 
-\bibliographystyle{IEEEtran}
+\subsection*{Augmentation arms}
+
+Eight arms are compared. Four are classical and serve as the bar any learned
+generator must clear.
+
+\begin{itemize}
+\item \textbf{None.} The unaugmented pipeline. Reported as an arm rather than as a
+      reference line, because on one dataset it wins.
+\item \textbf{Random oversampling.} Minority records duplicated with replacement.
+      Crude, and included precisely because it is: it distorts nothing.
+\item \textbf{SMOTE.} Interpolation between a record and its $k$ nearest same-class
+      neighbours. We use SMOTE-NC where categorical columns are present, since
+      interpolating one-hot indicators produces fractional membership.
+\item \textbf{ADASYN.} As SMOTE, with sampling density weighted toward records whose
+      neighbourhoods are dominated by other classes.
+\end{itemize}
+
+Four are learned generators, one per major family.
+
+\begin{itemize}
+\item \textbf{CTGAN}~\cite{xu2019modeling}, the published implementation, with its
+      mode-specific normalisation, conditional sampler and PacGAN discriminator~\cite{lin2018pacgan}.
+\item \textbf{Diffusion}, described in the Methods.
+\item \textbf{Flow matching}, described in the Methods.
+\item \textbf{Per-type flow matching}, described in the Methods.
+\end{itemize}
+
+For every arm, $k$ is set to $\min(5, n_{\min}-1)$ so that the smallest class does
+not fall below the neighbour count, and augmentation is applied to the raw frame
+before any encoding, so that categorical fields are handled as categories rather
+than as coordinates.
+
+\subsection*{Flow matching for tabular records}
+
+Flow matching~\cite{lipman2023flow} learns a time-dependent velocity field
+$v_\theta(x,t)$ that transports a simple reference distribution to the data
+distribution along a prescribed path. We take the linear path: for a real record
+$x_1$ and a Gaussian draw $x_0 \sim \mathcal{N}(0,I)$,
+\begin{equation}
+x_t = (1-t)\,x_0 + t\,x_1 ,
+\qquad t \in [0,1],
+\end{equation}
+whose associated target velocity is simply $x_1 - x_0$. Training minimises
+\begin{equation}
+\mathcal{L}(\theta) \;=\;
+\mathbb{E}_{t,\,x_0,\,x_1}
+\bigl\lVert v_\theta(x_t,t) - (x_1 - x_0) \bigr\rVert_2^2 ,
+\label{eq:fmloss}
+\end{equation}
+with $t$ drawn uniformly. Sampling integrates $\dot{x} = v_\theta(x,t)$ from $t=0$
+to $t=1$ by explicit Euler steps.
+
+Equation~\eqref{eq:fmloss} has an irreducible floor. The regression target
+$x_1-x_0$ is stochastic given $x_t$, so the best attainable predictor is its
+conditional mean and the loss cannot reach zero. On NSL-KDD's U2R class that floor
+sits near $1.31$, and our fitted models converge to approximately $0.35$. We state
+this because a reader comparing loss curves across generative families would
+otherwise have no reference for what convergence looks like here.
+
+\subsection*{Type-aware encoding}
+
+Flow matching as stated above treats $\mathcal{X}$ as a Euclidean space. Network
+flow records are not one. Table~\ref{tab:feattypes} audits this. Of NSL-KDD's 38 nominally numeric columns,
+six are binary
+flags such as \texttt{land} and \texttt{root\_shell}, six are low-cardinality counts
+such as \texttt{num\_shells}, and eleven are unbounded integer counts; only fifteen
+are genuinely continuous. Transported as continuous coordinates, these fields
+produce records with \texttt{land}~$=0.37$, which describes no realisable
+connection.
+
+\input{tables/tab_feattypes}
+
+We therefore infer column type from the training partition and encode accordingly:
+columns with at most ten distinct values are treated as discrete and one-hot
+encoded, integer counts are modelled after a $\log(1+x)$ transform and rounded on
+return, and continuous columns are standardised. At sampling time, discrete blocks
+are decoded by drawing from the softmax over the block rather than by taking its
+argmax, which would collapse every synthetic record of a class onto the modal
+category.
+
+The effect is large. On U2R the median Kolmogorov--Smirnov distance between real and
+synthetic marginals falls from $0.424$ to $0.056$, and the AUC of a discriminator
+trained to separate synthetic records from real ones falls from $1.000$ --- perfectly
+separable --- to $0.947$.
+
+This is not a new idea in generative modelling: TabDDPM~\cite{kotelnikov2023tabddpm}
+applies multinomial diffusion to categorical and binary fields for the same reason,
+and CTGAN's design likewise separates discrete from continuous columns. We record
+the measurement because the practice does not appear to have transferred to
+intrusion-detection augmentation, where SMOTE-NC protects only the columns declared
+categorical in the dataset documentation and interpolates the binary ones.
+
+\subsection*{Per-attack-type generation}
+
+Coarse intrusion categories are not single modes. NSL-KDD's R2L category aggregates
+eight distinct attack types --- \texttt{warezclient}, \texttt{guess\_passwd},
+\texttt{warezmaster} and others --- that share a label but not a distribution. A
+single continuous generator fitted to that mixture places mass between its
+components, in regions where no real attack lies.
+
+We fit one generator per attack type $s$ within a class, provided that type has at
+least $m$ training records, and draw from each in proportion to its share:
+\begin{equation}
+|\mathcal{S}_c^{(s)}| \;=\;
+\left\lfloor (\tau - n_c) \cdot \frac{n_{c}^{(s)}}{\sum_{s' \in \mathcal{T}_c} n_c^{(s')}}
+\right\rfloor ,
+\end{equation}
+where $\mathcal{T}_c$ is the set of types clearing the threshold. Types below it are
+not modelled, so per-type generation covers only part of a class, and that fraction
+turns out to predict where the method helps.
+
+We define the \emph{coverage} of class $c$ as the share of its training records
+belonging to a modelled type,
+\begin{equation}
+\kappa_c \;=\;
+\frac{\sum_{s \in \mathcal{T}_c} n_c^{(s)}}{n_c},
+\qquad
+\mathcal{T}_c = \{\, s : n_c^{(s)} \geq m \,\},
+\label{eq:coverage}
+\end{equation}
+so that $\kappa_c = 1$ when every type is modelled and $\kappa_c \to 0$ when the
+class is composed of types too small to fit. Equation~\eqref{eq:coverage} is
+computable from the training labels alone, before any generator is trained, and it
+is the quantity we find predicts where per-type generation is worth its cost.
+
+On NSL-KDD, per-type generation attains $\kappa = 0.97$ on R2L (three of eight types)
+and $\kappa = 0.58$ on U2R (one of four, only \texttt{buffer\_overflow} clearing the
+threshold). It takes R2L outright and finishes last among augmented arms on U2R.
+UNSW-NB15 supplies a control: it carries no labels below \texttt{attack\_cat}, so
+coverage is unity by construction, per-type reduces exactly to per-class, and the
+two arms should agree. They do, to within seed noise --- which is evidence that
+coverage, and not some incidental difference between the two implementations, is
+what separates them on NSL-KDD.
+
+\subsection*{An architecture-matched diffusion baseline}
+
+Comparing flow matching against an off-the-shelf diffusion implementation would
+confound the generative mechanism with differences in preprocessing, architecture
+and tuning. Our diffusion arm therefore subclasses the flow matcher and overrides
+only the training objective and the sampler. Encoder, decoder, type inference,
+$\log(1+x)$ handling, network width and depth, optimiser and categorical decoding
+are shared by construction rather than by intention.
+
+The forward process uses a cosine schedule,
+$\bar{\alpha}_t = \cos^2\!\bigl(\tfrac{\pi}{2}\cdot\tfrac{t/T+s}{1+s}\bigr)$ with
+$s=0.008$, and sampling uses DDIM striding~\cite{song2021ddim} at the same step count as flow matching,
+so the two arms cost the same number of network evaluations per record. Full
+1000-step ancestral sampling was not tractable at CICIDS2017 scale and was not run;
+we state this rather than leave it implied.
+
+CTGAN is deliberately \emph{not} matched in this way. It is the published
+implementation because that is the baseline a reader expects to see, and
+substituting a hand-written GAN would invite the objection that we did not use the
+real thing. The consequence is that any CTGAN-versus-flow difference may originate
+in preprocessing rather than in the adversarial objective, and we do not draw
+mechanism claims from that comparison.
+
+\subsection*{Preventing leakage}
+
+Three rules are applied without exception. Every transform --- the one-hot encoder,
+the scaler, the type inference --- is fitted on the training partition alone.
+Augmentation touches the training partition only; no synthetic record ever reaches
+the test set. Generators are fitted only to training records of the class they will
+synthesise.
+
+Categories present in test but absent from training are encoded as all-zero rather
+than raising an error. This matters here: NSL-KDD's test split contains
+\texttt{service} values that never appear in training, and dropping those rows would
+silently discard exactly the rare attacks under study.
+
+
+\subsection*{Datasets}
+
+Three benchmarks are used, summarised in Table~\ref{tab:datasets}. Goldschmidt and Chud\'{a} survey the available options and their limitations~\cite{goldschmidt2025network}. Ours are chosen to
+match those of the work this study takes as its
+reference point~\cite{alsubaei2025smart} and to span three decades of network
+telemetry.
+
+\textbf{NSL-KDD} is evaluated on its official \texttt{KDDTrain+} /
+\texttt{KDDTest+} partition (\trainRows{} / $22{,}544$ records, 41 features), with
+the 23 attack labels mapped to the standard five categories. We report it as a
+diagnostic rather than a headline benchmark, for a reason established in
+the Methods.
+
+\textbf{UNSW-NB15} is evaluated on its official partition ($175{,}341$ /
+$82{,}332$ records) across ten categories. Its rare classes --- Analysis, Backdoor,
+Shellcode and Worms --- all appear in both partitions, so a failure here is a failure
+of method rather than of benchmark.
+
+\textbf{CICIDS2017} is the largest and most recent, and receives a stratified
+$70/30$ split on the fine-grained label ($1{,}979{,}513$ / $848{,}363$ records, 78
+features). We repair two defects in the published files: \texttt{Flow Bytes/s} and
+\texttt{Flow Packets/s} carry infinities where the flow duration is zero, and
+several web-attack labels are mis-encoded, appearing with a replacement character
+where a hyphen was intended. Records with non-finite features are dropped and the labels are normalised. Both are instances of a wider problem: Engelen et al.\ document further defects in this dataset's flow construction and labelling and publish a corrected release~\cite{engelen2021troubleshooting}, and Dube argues that the summarised flow representation is itself a poor basis for classification irrespective of such defects~\cite{dube2024faulty}. We apply the repairs relevant to the features we use and return to the second point in the Limitations section.
+
+\input{tables/tab_datasets}
+
+Infiltration (25 training records) and Heartbleed (8) are excluded from all
+headline claims: with 11 and 3 test records respectively, their per-class F1 cannot
+be estimated stably, and including them destabilises macro-F1 by up to $0.13$
+between seeds that differ by $0.002$ on every other class.
+
+\subsection*{Why NSL-KDD is reported as a diagnostic}
+
+The R2L failure on NSL-KDD is quoted throughout this literature as evidence of a
+class-imbalance problem. It is largely not one. Of the \rtwolTrain{} R2L training
+records, \warezTrain{} --- $89\%$ --- belong to \texttt{warezclient}, an attack type
+with \emph{zero} test records. Conversely, $642$ of $2{,}887$ R2L test records
+belong to types with no training representation at all, as do $30$ of $67$ U2R test
+records.
+
+The effective R2L training size is therefore approximately \rtwolEffective{}
+records, an effective imbalance near \rtwolEffectiveRatio{} rather than the
+$1{:}68$ implied by the class counts. A generator fitted to R2L learns to reproduce
+\texttt{warezclient}, which cannot assist in detecting \texttt{snmpguess}. No
+augmentation method can close a gap of this kind, and results on this benchmark
+should be read as measuring behaviour under distribution shift rather than under
+imbalance.
+
+\subsection*{Classifiers}
+
+Two classifiers are used, chosen to match the reference work, which evaluates with
+both a gradient-boosted tree and a neural network~\cite{alsubaei2025smart}, and
+because they sit at opposite ends of the inductive-bias axis that should matter to synthetic data. That gradient-boosted trees remain hard to beat on tabular problems is well established~\cite{grinsztajn2022why}; the difference in inductive bias is precisely why we expect augmentation to affect the two differently. A tree is piecewise-constant and invariant to monotone rescaling, so
+a synthetic record falling inside an existing leaf merely reweights it. A network
+interpolates smoothly and is sensitive to feature scale, so the same record displaces
+a decision boundary it must then fit.
+
+\textbf{XGBoost}~\cite{chen2016xgboost}: 200 trees, depth 6, learning rate $0.3$,
+histogram method. Row and
+column subsampling are set to $0.8$ rather than $1.0$; at $1.0$ the fit is
+deterministic given fixed data, every seed returns an identical model, and the
+reported standard deviation is exactly zero, which measures nothing.
+
+\textbf{Multi-layer perceptron}: two hidden layers of 256 and 128 units with batch
+normalisation, ReLU and dropout $0.2$; AdamW at $10^{-3}$; early stopping on a $5\%$
+split held out from the \emph{training} partition, never from test.
+
+Table~\ref{tab:hyper} lists every setting used.
+Neither classifier is tuned per arm. A per-arm search would confound the
+augmentation effect with the effort spent tuning each arm, which is the most common
+way this comparison is gotten wrong. Neither uses class weighting, so that any
+difference between them is attributable to the model family rather than to two
+different imbalance corrections.
+
+\subsection*{Metrics and statistical protocol}
+
+Per-class precision, recall and F1 are the primary readout, reported with test
+support attached. Overall accuracy is computed only to be contrasted with macro-F1:
+on NSL-KDD the unaugmented pipeline reaches accuracy \baseAcc{} at macro-F1
+\baseMacroF{}, and that gap is the phenomenon under study.
+
+Every configuration is repeated over five seeds, which perturb both synthetic
+sampling and classifier fitting. Comparisons against the unaugmented arm use paired
+$t$-tests with Holm--Bonferroni correction applied within each (dataset, class)
+family, Cohen's $d$, and $10{,}000$-resample bootstrap confidence intervals~\cite{efron1979bootstrap}; the correction follows Holm's sequentially rejective procedure~\cite{holm1979simple}.
+
+We report a limit rather than working around it. The Wilcoxon signed-rank statistic
+over $n=5$ paired samples admits $2^5=32$ sign assignments, so its smallest
+attainable two-sided $p$-value is $0.0625$: \emph{no} comparison in this study can
+reach $p<0.05$ by that test, whatever the effect size. Reporting Wilcoxon alone would
+therefore render every result non-significant for a reason unrelated to the data.
+We use \textbf{``the 95\% bootstrap confidence interval excludes zero'' as the
+primary criterion} and report $p$-values alongside it.
+
+\subsection*{Degenerate fits}
+
+A fit that predicts a single class for the entire test set is not a sample from a
+method's performance distribution; it is a failure to train. These occur here, they
+are silent --- no exception, no warning, the GPU neither idle nor out of memory ---
+and they reproduce exactly across independent runs, so they are properties of the
+fit rather than noise. On CICIDS2017 the unaugmented arm at one seed predicts only
+benign traffic, reaching macro-F1 $0.0996$.
+
+Such fits are detected automatically, counted, and reported as a failure rate rather
+than averaged into a mean or quietly discarded. Averaging that single seed into the
+unaugmented arm moves its macro-F1 from $0.943$ to $0.775$, which would reverse the
+comparison it participates in.
+
+Learned generators additionally exhibit \emph{partial} collapse, in which one rare
+class degrades sharply while macro-F1 remains plausible. Because these evade any
+threshold on the aggregate, we report medians alongside means throughout; the gap
+between them is itself informative, and the Discussion returns to it.
+
+\subsection*{Implementation}
+
+All experiments run on a single machine with an NVIDIA GTX 1650 (4\,GB) and 14\,GB
+of system memory. Generators, both classifiers, and the neighbour searches used in
+the quality diagnostics run on the GPU; the classical resamplers are CPU-bound
+library implementations. Sampling is chunked so that GPU memory pressure does not
+vary with the number of records drawn, an effect that produced a fivefold spread in
+runtime for identical work before it was identified.
+
+Every result reported here is written to disk as it is produced and every table and
+figure in this paper is generated from those files by script. No number in this
+manuscript is transcribed by hand.
+
+\input{tables/tab_hyper}
+\section*{Data availability}
+
+All three datasets are publicly available: NSL-KDD, UNSW-NB15 and CICIDS2017. Code,
+result files, and the scripts that generate every table and figure in this paper are
+available at \url{https://github.com/prayag-1771/DiffIDS}.
+
+\section*{Author contributions}
+
+P.S. designed and implemented the experiments, performed the analysis and wrote the
+manuscript. R.T. supervised the work and reviewed the manuscript.
+
+\section*{Competing interests}
+
+The authors declare no competing interests.
+
+\bibliographystyle{unsrt}
 \bibliography{references}
 
 \end{document}

@@ -53,6 +53,8 @@ KNOWN = {
     "columnwidth", "textwidth", "linewidth", "textheight", "hsize",
     "rightarrow", "leftarrow", "Rightarrow", "leftrightarrow", "mapsto",
     "today", "IEEEauthorblockN", "IEEEauthorblockA", "textsuperscript",
+    "abstractname", "affil", "affilsep", "date", "setlength", "author",
+    "noindent", "vspace", "linewidth",
     "textsubscript", "and", "IEEEoverridecommandlockouts",
 }
 
