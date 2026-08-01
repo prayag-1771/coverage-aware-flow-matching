@@ -188,9 +188,7 @@ diffusion-based augmentation reported across the standard benchmarks
 
 They are also difficult to interpret, for three reasons.
 
-First, the comparisons are incomplete. Diff-IDS \cite{yang2025diffids} evaluates
-against deep architectures --- DNN, CNN, RNN, LSTM --- and reports 99.93\,\%
-accuracy, but does not compare against SMOTE. A generative model that
+First, the comparisons are incomplete. Generative augmentation is frequently evaluated against deep classifier architectures rather than against a classical resampling control. A generative model that
 outperforms an unaugmented classifier has demonstrated that augmentation helps;
 it has not demonstrated that \emph{generative} augmentation helps, which is the
 claim being made. Establishing the latter requires the classical resampler as a
@@ -327,7 +325,7 @@ states what they do not establish, and Section~\ref{sec:conclusion} concludes.
 The dominant response to rare-attack detection is to rebalance the training
 distribution. SMOTE~\cite{chawla2002smote} synthesises minority records by
 interpolating between a record and its nearest same-class neighbours;
-ADASYN~\cite{he2008adasyn} biases that sampling toward records whose neighbourhoods are dominated by other classes, Both remain the practical default in intrusion detection: recent work continues to build pipelines around them~\cite{abdelkhalek2023addressing,gmmadasyn2024overcoming}. Both are two decades old, both are available in one
+ADASYN~\cite{he2008adasyn} biases that sampling toward records whose neighbourhoods are dominated by other classes, Both remain the practical default in intrusion detection, and recent work continues to build pipelines around them: ADASYN combined with Tomek links on NSL-KDD~\cite{abdelkhalek2023addressing}, and with Gaussian-mixture clustering on UNSW-NB15~\cite{chen2024overcoming}. Both are two decades old, both are available in one
 line from standard libraries, and both appear in a large fraction of intrusion
 detection papers reporting improved rare-class performance.
 

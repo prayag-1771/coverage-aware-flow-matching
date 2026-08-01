@@ -28,17 +28,21 @@
   url     = {https://www.nature.com/articles/s41598-025-06363-5}
 }
 
-% CHECK: full author list and page range. "Yang, Hongwei" is the first author as
-% reported by the publisher page; confirm the remaining authors.
+% Verified 2026-08-01 from the publisher citation block. The previous entry gave
+% "Yang, Hongwei and others" -- wrong first name, no page range. Evaluates on
+% CICIDS2017, KDD99 and NSL-KDD; converts flows to grayscale images and applies a
+% Unet diffusion model, so it is not a tabular generator in the sense used here.
 @article{yang2025diffids,
-  author  = {Yang, Hongwei and others},
+  author  = {Yang, Yue and Tang, Xiangyan and Liu, Zhaowu and Cheng, Jieren and
+             Fang, Haozhe and Zhang, Cunyi},
   title   = {{Diff-IDS}: A Network Intrusion Detection Model Based on Diffusion
              Model for Imbalanced Data Samples},
   journal = {Computers, Materials \& Continua},
   volume  = {82},
   number  = {3},
+  pages   = {4389--4408},
   year    = {2025},
-  note    = {\url{https://www.techscience.com/cmc/v82n3/59921}}
+  doi     = {10.32604/cmc.2025.060357}
 }
 
 % Verified 2026-08-01 against dblp and IEEE Xplore: volume 12, pages 144489--144508.
@@ -66,7 +70,8 @@
   booktitle = {IEEE Symposium on Computational Intelligence for Security and
                Defense Applications (CISDA)},
   year      = {2009},
-  pages     = {1--6}
+  pages     = {1--6},
+  doi       = {10.1109/CISDA.2009.5356528}
 }
 
 @inproceedings{moustafa2015unsw,
@@ -97,14 +102,16 @@
   journal = {Journal of Artificial Intelligence Research},
   volume  = {16},
   pages   = {321--357},
-  year    = {2002}
+  year    = {2002},
+  doi     = {10.1613/jair.953}
 }
 
 @inproceedings{he2008adasyn,
   author    = {He, Haibo and Bai, Yang and Garcia, Edwardo A. and Li, Shutao},
   title     = {{ADASYN}: Adaptive synthetic sampling approach for imbalanced
                learning},
-  booktitle = {IEEE International Joint Conference on Neural Networks (IJCNN)},
+  booktitle = {IEEE International Joint Conference on Neural Networks (IEEE
+               World Congress on Computational Intelligence)},
   year      = {2008},
   pages     = {1322--1328}
 }
@@ -421,13 +428,18 @@
   doi     = {10.1007/s11227-023-05073-x}
 }
 
-@inproceedings{gmmadasyn2024overcoming,
+% Verified 2026-08-01 from the ACM citation block. The previous entry read
+% "Rahman, Md. and others", which was invented. Evaluates on UNSW-NB15 only.
+@inproceedings{chen2024overcoming,
+  author    = {Chen, Xin and Gong, Zhongyuan and Huang, Dixin and Jiang, Nan and
+               Zhang, Yuejin},
   title     = {Overcoming Class Imbalance in Network Intrusion Detection: A
                {Gaussian} Mixture Model and {ADASYN} Augmented Deep Learning
                Framework},
-  booktitle = {International Conference on Internet of Things and Machine
-               Learning},
+  booktitle = {Proceedings of the 2024 4th International Conference on Internet
+               of Things and Machine Learning (IoTML '24)},
+  pages     = {48--53},
   year      = {2024},
-  author    = {Rahman, Md. and others},
+  publisher = {Association for Computing Machinery},
   doi       = {10.1145/3697467.3697595}
 }
