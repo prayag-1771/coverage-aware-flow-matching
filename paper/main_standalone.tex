@@ -273,28 +273,6 @@ generate every table and figure in this paper directly from the saved result fil
 \end{enumerate}
 
 
-the Prior work section reviews imbalance handling in intrusion detection and
-generative modelling for tabular data, and positions this work against the closest
-recent benchmarking study. the Methods formalises the augmenter: the
-flow-matching objective, the type-aware encoding, per-attack-type generation and the
-coverage quantity, and the architecture-matched diffusion baseline.
-the Methods details datasets, classifiers and the statistical protocol,
-including a resolution limit we report rather than work around.
-
-the Results is organised as an argument. the Results
-establishes that the method improves rare-class detection;
-the Results shows that where it does so is predictable in advance
-from sub-class coverage; the Results reports the head-to-head against
-classical resampling in full, including the five classes where classical methods
-win. the Results--the Results cover the encoding,
-the failure of sample-quality measures to predict utility, and two standard settings
-that can be reduced at no cost. the Results
-and~the Results report where augmentation degrades detection and how far
-the conclusions transfer across classifier families.
-
-the Discussion interprets these results, the Limitations section
-states what they do not establish, and the Conclusion concludes.
-
 \subsection*{Prior work}
 \subsubsection*{Resampling for imbalanced intrusion detection}
 
@@ -395,8 +373,7 @@ relationship with achievable augmentation gain once that difficulty is accounted
 All numbers in this section are produced by \texttt{experiments/17\_paper\_tables.py}
 directly from the saved result files; none are transcribed by hand. Every arm sees
 the same splits, the same seeds, and the same preprocessing, and augmentation is
-applied to the training partition only, under the rules of
-the Methods.
+applied to the training partition only, under the leakage rules stated in the Methods.
 
 \subsection*{Rare-class detection improves substantially}
 
@@ -459,8 +436,7 @@ effective rare-class training signal is roughly one-tenth its nominal size
 cost of precision rather than better discrimination, and a deployment sensitive to
 false-alarm volume should not read those two rows as improvements.
 \emph{Sub-class generation is the exception}, improving discrimination itself on both
-classes --- which is consistent with the coverage mechanism of
-the Results: modelling the attack types that actually occur
+classes --- which is consistent with the coverage mechanism: modelling the attack types that actually occur
 produces a better-ordered decision function, not merely a wider one.
 
 % ---- inlined from tables/tab_prauc.tex ----
@@ -610,8 +586,7 @@ $7.14$ and the median Kolmogorov--Smirnov statistic from $0.113$ to $0.061$. A c
 class such as R2L is a mixture of dissimilar attack types, and a single continuous
 generator fitted to that mixture places mass between its modes rather than on them.
 
-Sample quality, however, is not the interesting part --- the Results
-shows it does not predict utility. The interesting part is that the benefit of
+Sample quality, however, is not the interesting part: it does not predict utility. The interesting part is that the benefit of
 per-type generation is \emph{predictable in advance}, from a quantity computable
 before any generator is fitted.
 
@@ -662,7 +637,7 @@ mechanism, not a calibrated cut-off.
 
 \subsection*{Generative versus classical, head to head}
 
-the Results compares each method against no augmentation. The stricter
+The improvements reported above are measured against no augmentation. The stricter
 question is whether a learned generator beats the classical resamplers a practitioner
 would otherwise reach for. Table~\ref{tab:headtohead}, plotted in
 Fig.~\ref{fig:headtohead}, answers it for every rare
@@ -721,8 +696,7 @@ sample utility --- the two sit within seed noise on most classes and their order
 changes by class --- but the fact that it reaches that parity without a noise
 schedule to tune.
 
-We report this table in full rather than only the four favourable rows, because it is
-what allows the Results to be read as a scope condition rather than
+We report this table in full rather than only the four favourable rows, because it is what allows the coverage result to be read as a scope condition rather than
 as selective reporting. A learned generator is not a general replacement for
 resampling in this setting. It is preferable on specific classes, and the coverage
 statistic identifies a subset of them before any training is done.
@@ -735,7 +709,7 @@ low-cardinality counts; generating them as continuous produces records such as
 according to their inferred type reduces the U2R median KS statistic from $0.424$ to
 $0.056$ and lowers real-versus-synthetic discriminator AUC from $1.000$ to $0.947$.
 
-As noted in the Methods, this is established practice in the
+As noted under \emph{Type-aware encoding}, this is established practice in the
 tabular generative modelling literature~\cite{kotelnikov2023tabddpm,xu2019modeling}.
 We report the magnitude because it appears not to have transferred to this
 application area, and because an eightfold change in marginal agreement is large
@@ -744,7 +718,7 @@ generator.
 
 \subsection*{No quality measure predicts utility}
 
-the Results improved sample quality substantially. It is therefore
+Type-aware encoding improved sample quality substantially. It is therefore
 worth establishing what sample quality buys, and the answer is that it does not
 reliably buy detection performance.
 
@@ -947,7 +921,7 @@ Equation~\eqref{eq:coverage}, is the statistic that carries predictive weight he
 
 \subsection*{Why fidelity and utility come apart}
 
-the Results reports that no quality measure orders the methods as
+We report above that no quality measure orders the methods as
 downstream F1 does. The mechanism appears to be structural rather than a matter of
 training budget: a continuous flow can approach the dense, near-duplicated clusters
 that network traffic forms but cannot concentrate mass onto them, which is why
@@ -1003,8 +977,7 @@ classes fail because train and test attack types are largely disjoint
 other classes in feature space; on CICIDS2017 they mostly do not fail at all, two of
 three rare classes sitting above $0.98$ before any augmentation. \emph{None of the
 three is a shortage of training examples}, which is the cause the standard remedy
-addresses --- and the ablation of the Results confirms it
-directly: quadrupling the synthetic volume moves rare-class F1 by less than $0.004$.
+addresses --- and the synthetic-volume ablation confirms it directly: quadrupling the synthetic volume moves rare-class F1 by less than $0.004$.
 
 A claim of the form ``method $X$ helps with class imbalance in intrusion detection''
 drawn from a single benchmark is therefore unsupported, and single-benchmark
@@ -1028,8 +1001,7 @@ prevailing practice, cannot establish the claims that are routinely drawn from i
 \subsection*{Limitations}
 
 \noindent\textbf{Five seeds.} Every configuration is repeated five times. This bounds the
-resolution of any rank test, as set out in the Methods, and is fewer
-repetitions than some recent benchmarking work uses. Our seeds perturb both the
+resolution of any rank test, as set out under \emph{Metrics and statistical protocol}, and is fewer repetitions than some recent benchmarking work uses. Our seeds perturb both the
 synthetic draw and the classifier fit, so each repetition varies more of the
 pipeline than a repeated classifier fit on fixed synthetic data would, but the
 sample size is nonetheless five.
@@ -1056,8 +1028,7 @@ substantially larger generator might behave differently. The evidence against
 undertraining reported in the Discussion constrains this concern but
 does not eliminate it.
 
-\noindent\textbf{CTGAN is not architecture-matched.} As stated in
-the Methods, this is deliberate, and we draw no mechanism claim
+\noindent\textbf{CTGAN is not architecture-matched.} As stated under \emph{An architecture-matched diffusion baseline}, this is deliberate, and we draw no mechanism claim
 from CTGAN-versus-flow differences.
 
 \section*{Conclusion}
@@ -1147,9 +1118,9 @@ Four are learned generators, one per major family.
 \begin{itemize}
 \item \textbf{CTGAN}~\cite{xu2019modeling}, the published implementation, with its
       mode-specific normalisation, conditional sampler and PacGAN discriminator~\cite{lin2018pacgan}.
-\item \textbf{Diffusion}, described in the Methods.
-\item \textbf{Flow matching}, described in the Methods.
-\item \textbf{Per-type flow matching}, described in the Methods.
+\item \textbf{Diffusion}, described under \emph{An architecture-matched diffusion baseline} below.
+\item \textbf{Flow matching}, described under \emph{Flow matching for tabular records} below.
+\item \textbf{Per-type flow matching}, described under \emph{Per-attack-type generation} below.
 \end{itemize}
 
 For every arm, $k$ is set to $\min(5, n_{\min}-1)$ so that the smallest class does
@@ -1324,8 +1295,7 @@ telemetry.
 \textbf{NSL-KDD} is evaluated on its official \texttt{KDDTrain+} /
 \texttt{KDDTest+} partition (\trainRows{} / $22{,}544$ records, 41 features), with
 the 23 attack labels mapped to the standard five categories. We report it as a
-diagnostic rather than a headline benchmark, for a reason established in
-the Methods.
+diagnostic rather than a headline benchmark, for the reason established under \emph{Why NSL-KDD is reported as a diagnostic}.
 
 \textbf{UNSW-NB15} is evaluated on its official partition ($175{,}341$ /
 $82{,}332$ records) across ten categories. Its rare classes --- Analysis, Backdoor,
