@@ -479,8 +479,10 @@ practitioner should want from an intervention applied by default. Tables~\ref{ta
 for all eight arms.
 
 % ---- inlined from tables/tab_improvements.tex ----
-\begin{table*}[t]
+\begin{table}[t]
 \centering
+\small
+\setlength{\tabcolsep}{4pt}
 \caption{Rare-class detection improvements from generative augmentation. Baseline is the identical pipeline with no augmentation. Gains are means over five seeds with 95\% bootstrap confidence intervals excluding zero; $p$-values are Holm--Bonferroni corrected within each (dataset, class) family. $^{*}p<0.05$, $^{**}p<0.01$, $^{***}p<0.001$.}
 \label{tab:improvements}
 \begin{tabular}{lllrrrrr}
@@ -501,7 +503,7 @@ UNSW-NB15 & Shellcode & CTGAN & 0.4954 & \textbf{0.5402} & \textbf{+0.0449}$^{*}
  & Shellcode & Diffusion & 0.4954 & \textbf{0.5172} & \textbf{+0.0218} & +4.4\% & 1.07 \\
 \bottomrule
 \end{tabular}
-\end{table*}
+\end{table}
 % ---- end inline ----
 
 \begin{figure}[t]
@@ -558,7 +560,7 @@ Per-type flow & 0.000\,\tiny{$\pm$0.000} & \textbf{0.112\,\tiny{$\pm$0.027}} & 0
 % ---- inlined from tables/tab_full_cicids.tex ----
 \begin{table}[t]
 \centering
-\caption{Per-class F1 on CICIDS2017, mean $\pm$ standard deviation over five seeds. One degenerate fit is excluded, as described in Section~\ref{sec:setup:degenerate}. Best result per class in bold.}
+\caption{Per-class F1 on CICIDS2017, mean $\pm$ standard deviation over five seeds. One degenerate fit is excluded, as described under \emph{Degenerate fits} in the Methods. Best result per class in bold.}
 \label{tab:full_cicids}
 \begin{tabular}{lrrr}
 \toprule

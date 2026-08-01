@@ -58,7 +58,8 @@ def table_improvements() -> str:
             & (sig.ci_excludes_zero)].sort_values("mean_diff", ascending=False)
 
     lines = [
-        r"\begin{table*}[t]", r"\centering",
+        r"\begin{table}[t]", r"\centering", r"\small",
+        r"\setlength{\tabcolsep}{4pt}",
         r"\caption{Rare-class detection improvements from generative augmentation. "
         r"Baseline is the identical pipeline with no augmentation. Gains are means "
         r"over five seeds with 95\% bootstrap confidence intervals excluding zero; "
@@ -83,7 +84,7 @@ def table_improvements() -> str:
             f"\\textbf{{{ach:.4f}}} & \\textbf{{{r.mean_diff:+.4f}}}"
             f"{sig_marker(r.t_p_holm)} & {rel:+.1f}\\% & {r.cohens_d:.2f} \\\\"
         )
-    lines += [r"\bottomrule", r"\end{tabular}", r"\end{table*}"]
+    lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
     return "\n".join(lines)
 
 
@@ -126,8 +127,9 @@ def table_full_comparison(dataset: str) -> str:
         r"\begin{table}[t]", r"\centering",
         f"\\caption{{Per-class F1 on {dataset}, mean $\\pm$ standard deviation over "
         + (f"five seeds. {'One' if dropped == 1 else dropped} degenerate "
-           f"{'fit is' if dropped == 1 else 'fits are'} excluded, as described in "
-           r"Section~\ref{sec:setup:degenerate}. " if dropped else "five seeds. ")
+           f"{'fit is' if dropped == 1 else 'fits are'} excluded, "
+           r"as described under \emph{Degenerate fits} in the Methods. " if dropped
+           else "five seeds. ")
         + r"Best result per class in bold.}",
         f"\\label{{tab:full_{key}}}",
         r"\begin{tabular}{l" + "r" * len(rare) + "}", r"\toprule",
