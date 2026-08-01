@@ -136,9 +136,7 @@ machine learning are now standard components of enterprise security monitoring,
 and the published accuracy figures attached to them are remarkable. Models
 evaluated on the common benchmarks routinely report overall accuracy above
 99\,\% \cite{alsubaei2025smart, yang2025diffids}. Read alongside the operational
-reality that intrusions continue to succeed---a gap Sommer and Paxson
-identified as structural to this problem rather than incidental
-\cite{sommer2010outside}, those figures invite a question
+reality that intrusions continue to succeed, those figures invite a question
 that the aggregate metric cannot answer: accuracy on \emph{what}?
 
 The answer is uncomfortable. Network traffic is dominated by benign flows, and
@@ -333,7 +331,7 @@ states what they do not establish, and Section~\ref{sec:conclusion} concludes.
 The dominant response to rare-attack detection is to rebalance the training
 distribution. SMOTE~\cite{chawla2002smote} synthesises minority records by
 interpolating between a record and its nearest same-class neighbours;
-ADASYN~\cite{he2008adasyn} biases that sampling toward records whose neighbourhoods are dominated by other classes, and Borderline-SMOTE~\cite{han2005borderline} restricts synthesis to samples near the decision boundary. Johnson and Khoshgoftaar survey the wider family and its deep-learning successors~\cite{johnson2019survey}. Both are two decades old, both are available in one
+ADASYN~\cite{he2008adasyn} biases that sampling toward records whose neighbourhoods are dominated by other classes, Both remain the practical default in intrusion detection: recent work continues to build pipelines around them~\cite{ahsan2023addressing,gmmadasyn2024overcoming}. Both are two decades old, both are available in one
 line from standard libraries, and both appear in a large fraction of intrusion
 detection papers reporting improved rare-class performance.
 
@@ -349,8 +347,7 @@ to protect.
 \subsection{Generative models for tabular data}
 
 Interpolation has increasingly been replaced by learned generators.
-CTGAN~\cite{xu2019modeling} adapts adversarial training~\cite{goodfellow2014gan}
-to tabular data through
+CTGAN~\cite{xu2019modeling} adapts adversarial training to tabular data through
 mode-specific normalisation of continuous columns and a conditional sampler that
 addresses category imbalance. Denoising diffusion~\cite{ho2020denoising} was adapted
 to the tabular setting by TabDDPM~\cite{kotelnikov2023tabddpm}, which applies
@@ -367,8 +364,7 @@ one we test directly.
 
 Applications of generative models to intrusion datasets are numerous, and several
 recent works train a separate generator per attack category rather than a single
-conditional model. Diffusion has been applied to this problem specifically, including
-work using the benchmarks studied here~\cite{yang2025diffids}. A separate line of
+conditional model. Diffusion has been applied to this problem specifically, including work using the benchmarks studied here~\cite{yang2025diffids,dift2025diffusion}, and conditional GANs continue to be proposed for minority-class synthesis~\cite{midsgan2025minority}. A separate line of
 work examines how far intrusion detection models transfer between datasets at
 all~\cite{cantone2024machine}, finding substantial degradation; our observation that
 the three benchmarks disagree on the direction of the SMOTE effect is a
@@ -408,9 +404,7 @@ need not be the method that best supplements an existing one. We take that work 
 the reference point for fidelity benchmarking and address the per-class utility
 question it leaves open.
 
-Beyond intrusion detection, a broader literature evaluates synthetic tabular data by
-training downstream models on it, and reports that no single generator dominates
-across tasks. Our contribution to that discussion is a negative result specific to
+Beyond intrusion detection, a broader literature evaluates synthetic tabular data by training downstream models on it, and reports that no single generator dominates across tasks~\cite{fonseca2025survey,chowdhury2025synthetic}. Our contribution to that discussion is a negative result specific to
 the rare-class setting: across four independent quality measures --- discriminator
 detectability, nearest-neighbour distance, marginal divergence, and attribution
 similarity~\cite{lundberg2017unified} --- none orders the methods as downstream
@@ -420,8 +414,7 @@ rare-class F1 does.
 
 The observation that some classes resist augmentation regardless of how much data is
 supplied connects to the classification-complexity literature, which characterises
-problem difficulty through geometric properties of the feature
-space~\cite{lorena2019complex}. We compute two such measures --- the leave-one-out
+problem difficulty through geometric properties of the feature space. Recent surveys treat class overlap as the mechanism that makes imbalance harmful~\cite{dablain2024overlap}, and new complexity measures target the multi-class imbalanced setting specifically~\cite{complexity2024multiclass}. We compute two such measures --- the leave-one-out
 nearest-neighbour error and the $k$-neighbourhood class purity --- and report both the
 strong relationship they hold with baseline difficulty and the absence of any
 relationship with achievable augmentation gain once that difficulty is accounted for.
@@ -664,10 +657,7 @@ silently discard exactly the rare attacks under study.
 
 \subsection{Datasets}
 
-Three benchmarks are used, summarised in Table~\ref{tab:datasets}. Surveys of the
-available options and their limitations are given by Ring et
-al.~\cite{ring2019survey} and, more recently, by Goldschmidt and
-Chud\'{a}~\cite{goldschmidt2025network}. Ours are chosen to
+Three benchmarks are used, summarised in Table~\ref{tab:datasets}. Goldschmidt and Chud\'{a} survey the available options and their limitations~\cite{goldschmidt2025network}. Ours are chosen to
 match those of the work this study takes as its
 reference point~\cite{alsubaei2025smart} and to span three decades of network
 telemetry.
