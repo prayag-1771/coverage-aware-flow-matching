@@ -211,13 +211,17 @@
 %   Introduction -- currently asserted without a reference. MUST be resolved
 %   before submission or the sentence must be removed.
 
-% Closest recent work. Benchmarks twelve generative architectures on NSL-KDD and
-% CIC-IDS2017 under a train-on-synthetic protocol with binary labels. Verified
-% against the arXiv HTML 2026-07-31: aggregate F1/accuracy only, no per-class
-% rare-attack results, no flow matching, and no reported cases of augmentation
-% degrading performance below baseline. Cited as the state of the art in fidelity
-% benchmarking; the per-class utility question it leaves open is what this work
-% addresses.
+% Closest recent work. Verified 2026-08-01 from the arXiv listing: authors, IEEE
+% Access vol 14 pp 468--484 2026, publisher DOI, twelve generative architectures on
+% NSL-KDD and CIC-IDS2017, N=20 runs, three structural fidelity metrics, GAN-based
+% models best, diffusion prohibitively costly at scale. All confirmed by the abstract.
+%
+% OUTSTANDING: the abstract does NOT state that the labels are binary or that
+% utility is measured train-on-synthetic/test-on-real. Those two facts were read
+% from the arXiv full text on 2026-07-31 and are the basis of the gap claim in
+% Section II-D -- that rare classes are not separately observable in their setup.
+% Confirm both against the PDF methodology section before submission; if either is
+% wrong, Section II-D must be rewritten.
 @article{architectural2026selection,
   author  = {Ammara, Dure Adan and Ding, Jianguo and Tutschku, Kurt},
   title   = {Architectural Selection Framework for Synthetic Network Traffic:
@@ -226,6 +230,7 @@
   volume  = {14},
   pages   = {468--484},
   year    = {2026},
+  doi     = {10.1109/ACCESS.2025.3646769},
   url     = {https://arxiv.org/abs/2410.16326}
 }
 
